@@ -1,39 +1,64 @@
 package server
 
 import (
-	"context"
+	"fmt"
 	"net/http"
-	"time"
 
-	"github.com/gin-gonic/gin"
+	"tushartemplategin/internal/health"
+	"tushartemplategin/pkg/config"
+	"tushartemplategin/pkg/logger"
 )
 
-// Server wraps the HTTP server and provides methods for lifecycle management
 type Server struct {
-	httpServer *http.Server // Underlying HTTP server
-	router     *gin.Engine  // Gin router for handling requests
+	config *config.Config
+	logger *logger.Logger
+	router *http.ServeMux
 }
 
-// New creates a new server instance with the given port and router
-func New(port string, router *gin.Engine) *Server {
-	return &Server{
-		httpServer: &http.Server{
-			Addr:         port,             // Server address (e.g., ":8080")
-			Handler:      router,           // Gin router to handle requests
-			ReadTimeout:  15 * time.Second, // Timeout for reading requests
-			WriteTimeout: 15 * time.Second, // Timeout for writing responses
-			IdleTimeout:  60 * time.Second, // Timeout for idle connections
-		},
-		router: router,
+func New(cfg *config.Config, log *logger.Logger) *Server {
+	s := &Server{
+		config: cfg,
+		logger: log,
+		router: http.NewServeMux(),
 	}
+	s.setupRoutes()
+	return s
 }
 
-// ListenAndServe starts the HTTP server and begins accepting requests
-func (s *Server) ListenAndServe() error {
-	return s.httpServer.ListenAndServe()
+func (s *Server) setupRoutes() {
+	// Health check endpoints
+	s.router.HandleFunc("/health", health.HealthCheck)
+	s.router.HandleFunc("/health/detailed", health.DetailedHealthCheck)
+	
+	// Root endpoint
+	s.router.HandleFunc("/", s.handleRoot)
+	
+	// API endpoints
+	s.router.HandleFunc("/api/status", s.handleAPIStatus)
 }
 
-// Shutdown gracefully shuts down the server with the given context
-func (s *Server) Shutdown(ctx context.Context) error {
-	return s.httpServer.Shutdown(ctx)
+func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"message": "Welcome to Tushar Template Gin", "service": "tushartemplategin", "version": "1.0.0"}`)
+}
+
+func (s *Server) handleAPIStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"status": "running", "environment": "%s", "port": %d}`, s.config.Environment, s.config.Port)
+}
+
+func (s *Server) Start() error {
+	addr := fmt.Sprintf(":%d", s.config.Port)
+	s.logger.Info("Starting server on port %d", s.config.Port)
+	s.logger.Info("Environment: %s", s.config.Environment)
+	s.logger.Info("Health check available at: http://localhost%s/health", addr)
+	
+	return http.ListenAndServe(addr, s.router)
 }
