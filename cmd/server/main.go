@@ -92,38 +92,73 @@ func main() {
 	// Step 9: Create HTTP server instance with our router
 	srv := server.New(cfg.Server.Port, router)
 
-	// Step 10: Start the server in a background goroutine
+	// Step 10: Start the server in a background goroutine with proper coordination
+	// Use channels to coordinate between server goroutine and main goroutine
+	serverErr := make(chan error, 1)
+	serverStarted := make(chan bool, 1)
+
 	go func() {
 		appLogger.Info(context.Background(), "Starting TUSHAR TEMPLATE GIN...", logger.Fields{
 			"port": cfg.Server.Port, // Log the port we're starting on
 			"mode": cfg.Server.Mode, // Log the server mode
 		})
 
+		// Signal that server is attempting to start
+		serverStarted <- true
+
 		// Start listening for HTTP requests
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			appLogger.Fatal(context.Background(), "Failed to start server", err, logger.Fields{
-				"port": cfg.Server.Port,
+			appLogger.Error(context.Background(), "Server failed to start", logger.Fields{
+				"port":  cfg.Server.Port,
+				"error": err.Error(),
 			})
+			// Send error to main goroutine so it can exit
+			serverErr <- err
+		} else {
+			// Server stopped normally (not due to error)
+			serverErr <- nil
 		}
 	}()
 
-	// Step 11: Wait for interrupt signal to gracefully shutdown the server
+	// Step 11: Wait for either server to start successfully OR fail to start
+	// This prevents the main goroutine from hanging if server fails to start
+	select {
+	case <-serverStarted:
+		appLogger.Info(context.Background(), "Server started successfully", logger.Fields{
+			"port": cfg.Server.Port,
+		})
+	case err := <-serverErr:
+		appLogger.Fatal(context.Background(), "Server failed to start, exiting", err, logger.Fields{
+			"port": cfg.Server.Port,
+		})
+	}
+
+	// Step 12: Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
 	// Listen for SIGINT (Ctrl+C) and SIGTERM (termination signal)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM) // Fixed: was SIGM, should be SIGTERM
-	<-quit                                               // Block until we receive a signal
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Wait for either shutdown signal OR server error
+	select {
+	case <-quit:
+		appLogger.Info(context.Background(), "Shutdown signal received", logger.Fields{})
+	case err := <-serverErr:
+		appLogger.Error(context.Background(), "Server encountered error, shutting down", logger.Fields{
+			"error": err.Error(),
+		})
+	}
 
 	appLogger.Info(context.Background(), "Shutting down server", logger.Fields{})
 
-	// Step 12: Create a deadline for server shutdown (30 seconds)
+	// Step 13: Create a deadline for server shutdown (30 seconds)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel() // Ensure context is cancelled when function exits
 
-	// Step 13: Attempt graceful shutdown
+	// Step 14: Attempt graceful shutdown
 	if err := srv.Shutdown(ctx); err != nil {
 		appLogger.Fatal(context.Background(), "Server forced to shutdown", err, logger.Fields{})
 	}
 
-	// Step 14: Log successful shutdown
+	// Step 15: Log successful shutdown
 	appLogger.Info(context.Background(), "Server exited", logger.Fields{})
 }
