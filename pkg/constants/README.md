@@ -1,31 +1,24 @@
 # Constants Package
 
-This package contains common constants used throughout the application, including HTTP status codes and error messages.
+This package contains common constants used throughout the application, including error messages and other application-specific constants.
 
 ## Usage
 
 ### HTTP Status Codes
 
 ```go
-import "github.com/tushartemplategin/pkg/constants"
+import (
+    "net/http"
+    "github.com/tushartemplategin/pkg/constants"
+)
 
-// Instead of hardcoded values
-c.JSON(500, gin.H{"error": "Internal Server Error"})
-
-// Use constants
-c.JSON(constants.StatusInternalServerError, gin.H{"error": constants.ERROR_500_INTERNAL_SERVER_ERROR})
+// Use standard net/http constants for status codes
+c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ERROR_500_INTERNAL_SERVER_ERROR})
+c.JSON(http.StatusOK, gin.H{"status": "success"})
+c.JSON(http.StatusBadRequest, gin.H{"error": constants.ERROR_400_BAD_REQUEST})
 ```
 
 ### Available Constants
-
-#### HTTP Status Codes
-- `StatusOK` (200)
-- `StatusCreated` (201)
-- `StatusBadRequest` (400)
-- `StatusUnauthorized` (401)
-- `StatusNotFound` (404)
-- `StatusInternalServerError` (500)
-- And many more...
 
 #### Error Messages
 - `ERROR_500_INTERNAL_SERVER_ERROR`
@@ -42,7 +35,7 @@ c.JSON(constants.StatusInternalServerError, gin.H{"error": constants.ERROR_500_I
 
 1. **Maintainability**: Centralized location for all constants
 2. **Consistency**: Ensures consistent error messages across the application
-3. **Type Safety**: Prevents typos in status codes
+3. **Standards Compliance**: Uses standard Go `net/http` constants for HTTP status codes
 4. **Easy Updates**: Change error messages in one place
 5. **Documentation**: Self-documenting code with meaningful constant names
 
@@ -55,3 +48,14 @@ When adding new constants to this package:
 3. Add comments for complex constants
 4. Follow the existing naming convention
 5. Update this README if adding new categories
+
+## Note on HTTP Status Codes
+
+This package no longer defines custom HTTP status code constants. Instead, use the standard Go `net/http` package constants:
+- `http.StatusOK` (200)
+- `http.StatusCreated` (201)
+- `http.StatusBadRequest` (400)
+- `http.StatusUnauthorized` (401)
+- `http.StatusNotFound` (404)
+- `http.StatusInternalServerError` (500)
+- And many more...
