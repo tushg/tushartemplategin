@@ -15,6 +15,7 @@ import (
 	// External packages for configuration, logging, and server
 	"tushartemplategin/pkg/config"
 	"tushartemplategin/pkg/logger"
+	"tushartemplategin/pkg/middleware"
 	"tushartemplategin/pkg/server"
 
 	"github.com/gin-gonic/gin"
@@ -65,6 +66,16 @@ func main() {
 	// ===== DOMAIN SETUP =====
 	// Step 6: Setup domains and middleware
 	router = setupDomainsAndMiddleware(router, appLogger)
+
+	// Note: Additional middleware can be added here if needed
+	// TODO: Add request logging middleware
+	// router.Use(logger.RequestLogger(appLogger))
+	//
+	// TODO: Add rate limiting middleware
+	// router.Use(middleware.RateLimit())
+	//
+	// TODO: Add authentication middleware
+	// router.Use(middleware.Auth())
 
 	// Step 7: Setup API routes using module-level route registration
 	api := router.Group("/api/v1") // API version 1 group
@@ -150,6 +161,12 @@ func main() {
 // setupDomainsAndMiddleware initializes domain-specific components and middleware
 func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger) *gin.Engine {
 	ctx := context.Background()
+
+	// ===== SECURITY MIDDLEWARE =====
+	appLogger.Info(ctx, "Setting up security middleware", logger.Fields{})
+	// Add comprehensive security headers (fixes Missing_HSTS_Header DRP issue)
+	router.Use(middleware.SecurityHeaders())
+	appLogger.Info(ctx, "Security middleware setup complete", logger.Fields{})
 
 	// ===== CURRENT DOMAINS =====
 	appLogger.Info(ctx, "Setting up health domain", logger.Fields{})
