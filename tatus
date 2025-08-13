@@ -1,0 +1,87 @@
+[1mdiff --git a/cmd/server/main.go b/cmd/server/main.go[m
+[1mindex f3dcca8..e0ce3fa 100644[m
+[1m--- a/cmd/server/main.go[m
+[1m+++ b/cmd/server/main.go[m
+[36m@@ -92,38 +92,73 @@[m [mfunc main() {[m
+ 	// Step 9: Create HTTP server instance with our router[m
+ 	srv := server.New(cfg.Server.Port, router)[m
+ [m
+[31m-	// Step 10: Start the server in a background goroutine[m
+[32m+[m	[32m// Step 10: Start the server in a background goroutine with proper coordination[m
+[32m+[m	[32m// Use channels to coordinate between server goroutine and main goroutine[m
+[32m+[m	[32mserverErr := make(chan error, 1)[m
+[32m+[m	[32mserverStarted := make(chan bool, 1)[m
+[32m+[m
+ 	go func() {[m
+ 		appLogger.Info(context.Background(), "Starting TUSHAR TEMPLATE GIN...", logger.Fields{[m
+ 			"port": cfg.Server.Port, // Log the port we're starting on[m
+ 			"mode": cfg.Server.Mode, // Log the server mode[m
+ 		})[m
+ [m
+[32m+[m		[32m// Signal that server is attempting to start[m
+[32m+[m		[32mserverStarted <- true[m
+[32m+[m
+ 		// Start listening for HTTP requests[m
+ 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {[m
+[31m-			appLogger.Fatal(context.Background(), "Failed to start server", err, logger.Fields{[m
+[31m-				"port": cfg.Server.Port,[m
+[32m+[m			[32mappLogger.Error(context.Background(), "Server failed to start", logger.Fields{[m
+[32m+[m				[32m"port":  cfg.Server.Port,[m
+[32m+[m				[32m"error": err.Error(),[m
+ 			})[m
+[32m+[m			[32m// Send error to main goroutine so it can exit[m
+[32m+[m			[32mserverErr <- err[m
+[32m+[m		[32m} else {[m
+[32m+[m			[32m// Server stopped normally (not due to error)[m
+[32m+[m			[32mserverErr <- nil[m
+ 		}[m
+ 	}()[m
+ [m
+[31m-	// Step 11: Wait for interrupt signal to gracefully shutdown the server[m
+[32m+[m	[32m// Step 11: Wait for either server to start successfully OR fail to start[m
+[32m+[m	[32m// This prevents the main goroutine from hanging if server fails to start[m
+[32m+[m	[32mselect {[m
+[32m+[m	[32mcase <-serverStarted:[m
+[32m+[m		[32mappLogger.Info(context.Background(), "Server started successfully", logger.Fields{[m
+[32m+[m			[32m"port": cfg.Server.Port,[m
+[32m+[m		[32m})[m
+[32m+[m	[32mcase err := <-serverErr:[m
+[32m+[m		[32mappLogger.Fatal(context.Background(), "Server failed to start, exiting", err, logger.Fields{[m
+[32m+[m			[32m"port": cfg.Server.Port,[m
+[32m+[m		[32m})[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32m// Step 12: Wait for interrupt signal to gracefully shutdown the server[m
+ 	quit := make(chan os.Signal, 1)[m
+ 	// Listen for SIGINT (Ctrl+C) and SIGTERM (termination signal)[m
+[31m-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM) // Fixed: was SIGM, should be SIGTERM[m
+[31m-	<-quit                                               // Block until we receive a signal[m
+[32m+[m	[32msignal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)[m
+[32m+[m
+[32m+[m	[32m// Wait for either shutdown signal OR server error[m
+[32m+[m	[32mselect {[m
+[32m+[m	[32mcase <-quit:[m
+[32m+[m		[32mappLogger.Info(context.Background(), "Shutdown signal received", logger.Fields{})[m
+[32m+[m	[32mcase err := <-serverErr:[m
+[32m+[m		[32mappLogger.Error(context.Background(), "Server encountered error, shutting down", logger.Fields{[m
+[32m+[m			[32m"error": err.Error(),[m
+[32m+[m		[32m})[m
+[32m+[m	[32m}[m
+ [m
+ 	appLogger.Info(context.Background(), "Shutting down server", logger.Fields{})[m
+ [m
+[31m-	// Step 12: Create a deadline for server shutdown (30 seconds)[m
+[32m+[m	[32m// Step 13: Create a deadline for server shutdown (30 seconds)[m
+ 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)[m
+ 	defer cancel() // Ensure context is cancelled when function exits[m
+ [m
+[31m-	// Step 13: Attempt graceful shutdown[m
+[32m+[m	[32m// Step 14: Attempt graceful shutdown[m
+ 	if err := srv.Shutdown(ctx); err != nil {[m
+ 		appLogger.Fatal(context.Background(), "Server forced to shutdown", err, logger.Fields{})[m
+ 	}[m
+ [m
+[31m-	// Step 14: Log successful shutdown[m
+[32m+[m	[32m// Step 15: Log successful shutdown[m
+ 	appLogger.Info(context.Background(), "Server exited", logger.Fields{})[m
+ }[m
