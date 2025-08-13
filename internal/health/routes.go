@@ -2,6 +2,7 @@ package health
 
 import (
 	"github.com/gin-gonic/gin"
+	"tushartemplategin/pkg/constants"
 )
 
 // RegisterRoutes registers all health-related routes to the given router group
@@ -38,14 +39,14 @@ func getHealthHandler(c *gin.Context) {
 	health, err := healthService.GetHealth(ctx)
 	if err != nil {
 		// Return 500 error if service fails
-		c.JSON(500, gin.H{
-			"error": "Failed to get health status",
+		c.JSON(constants.StatusInternalServerError, gin.H{
+			"error": constants.ERROR_HEALTH_STATUS_FAILED,
 		})
 		return
 	}
 
 	// Return health status with 200 OK
-	c.JSON(200, health)
+	c.JSON(constants.StatusOK, health)
 }
 
 // getReadinessHandler handles readiness probe requests
@@ -56,13 +57,13 @@ func getReadinessHandler(c *gin.Context) {
 
 	readiness, err := healthService.GetReadiness(ctx)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Failed to get readiness status",
+		c.JSON(constants.StatusInternalServerError, gin.H{
+			"error": constants.ERROR_READINESS_FAILED,
 		})
 		return
 	}
 
-	c.JSON(200, readiness)
+	c.JSON(constants.StatusOK, readiness)
 }
 
 // getLivenessHandler handles liveness probe requests
@@ -73,11 +74,11 @@ func getLivenessHandler(c *gin.Context) {
 
 	liveness, err := healthService.GetLiveness(ctx)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Failed to get liveness status",
+		c.JSON(constants.StatusInternalServerError, gin.H{
+			"error": constants.ERROR_LIVENESS_FAILED,
 		})
 		return
 	}
 
-	c.JSON(200, liveness)
+	c.JSON(constants.StatusOK, liveness)
 }
