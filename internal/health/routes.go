@@ -63,7 +63,7 @@ func getReadinessHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(constants.StatusOK, readiness)
+	c.JSON(200, readiness)
 }
 
 // getLivenessHandler handles liveness probe requests

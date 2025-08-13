@@ -15,7 +15,3 @@ type Service interface {
 	GetReadiness(ctx context.Context) (*ReadinessStatus, error) // Get readiness status
 	GetLiveness(ctx context.Context) (*LivenessStatus, error)   // Get liveness status
 }
-
-// Note: We removed the Handler interface since we're now using closures in routes.go
-// This makes the module more flexible and easier to test
-// The handlers are now defined as closures in routes.go for better dependency injection
