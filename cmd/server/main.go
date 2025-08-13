@@ -21,6 +21,7 @@ import (
 )
 
 func main() {
+	// ===== CONFIGURATION SETUP =====
 	// Step 1: Load application configuration from config files
 	cfg, err := config.Load()
 	if err != nil {
@@ -47,6 +48,7 @@ func main() {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 
+	// ===== SERVER INITIALIZATION =====
 	// Step 4: Set Gin framework mode based on configuration
 	if cfg.Server.Mode == "release" {
 		gin.SetMode(gin.ReleaseMode) // Production mode (no debug info)
@@ -60,35 +62,17 @@ func main() {
 	//Need to investigate more on this.
 	router.SetTrustedProxies(nil)
 
-	// Step 6: Initialize the health package components
-	// Create repository (data access layer)
-	healthRepo := health.NewHealthRepository()
+	// ===== DOMAIN SETUP =====
+	// Step 6: Setup domains and middleware
+	router = setupDomainsAndMiddleware(router, appLogger)
 
-	// Create service (business logic layer)
-	healthService := health.NewHealthService(healthRepo, appLogger)
-
-	// Step 7: Add middleware to the router
-	// Add health service to context so routes can access it
-	router.Use(func(c *gin.Context) {
-		c.Set("healthService", healthService)
-		c.Next()
-	})
-
-	// Note: We're keeping it simple for now, but we can add more middleware here
-	// router.Use(logger.RequestLogger(appLogger))  // Uncomment when you add request logging middleware
-	// router.Use(middleware.CORS())                // Uncomment when you add CORS middleware
-
-	// Step 8: Setup API routes using module-level route registration
+	// Step 7: Setup API routes using module-level route registration
 	api := router.Group("/api/v1") // API version 1 group
 
-	// Register health module routes
-	// This makes the health module self-contained and responsible for its own routing
-	health.RegisterRoutes(api)
+	// Register all domain routes in a clean, organized way
+	registerAllRoutes(api, appLogger)
 
-	// Note: Product endpoints have been removed to keep only health API
-	// You can add them back later when needed by creating product/routes.go
-	// and calling product.RegisterRoutes(api)
-
+	// ===== SERVER LIFECYCLE =====
 	// Step 9: Create HTTP server instance with our router
 	srv := server.New(cfg.Server.Port, router)
 
@@ -161,4 +145,84 @@ func main() {
 
 	// Step 15: Log successful shutdown
 	appLogger.Info(context.Background(), "Server exited", logger.Fields{})
+}
+
+// setupDomainsAndMiddleware initializes domain-specific components and middleware
+func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger) *gin.Engine {
+	ctx := context.Background()
+
+	// ===== CURRENT DOMAINS =====
+	appLogger.Info(ctx, "Setting up health domain", logger.Fields{})
+	// Create repository (data access layer)
+	healthRepo := health.NewHealthRepository()
+
+	// Create service (business logic layer)
+	healthService := health.NewHealthService(healthRepo, appLogger)
+
+	// Add health service to context so routes can access it
+	router.Use(func(c *gin.Context) {
+		c.Set("healthService", healthService)
+		c.Next()
+	})
+	appLogger.Info(ctx, "Health domain setup complete", logger.Fields{})
+
+	// ===== FUTURE DOMAINS (TODO) =====
+	// TODO: Add product domain
+	// appLogger.Info(ctx, "Registering product domain routes", logger.Fields{})
+	// product.RegisterRoutes(api)
+	// appLogger.Info(ctx, "Product domain routes registered successfully", logger.Fields{})
+	//
+	// TODO: Add user domain
+	// appLogger.Info(ctx, "Registering user domain routes", logger.Fields{})
+	// user.RegisterRoutes(api)
+	// appLogger.Info(ctx, "User domain routes registered successfully", logger.Fields{})
+	//
+	// TODO: Add compliance domain
+	// appLogger.Info(ctx, "Registering compliance domain routes", logger.Fields{})
+	// compliance.RegisterRoutes(api)
+	// appLogger.Info(ctx, "Compliance domain routes registered successfully", logger.Fields{})
+	//
+	// TODO: Add payment domain
+	// appLogger.Info(ctx, "Registering payment domain routes", logger.Fields{})
+	// payment.RegisterRoutes(api)
+	// appLogger.Info(ctx, "Payment domain routes registered successfully", logger.Fields{})
+	//
+	// TODO: Add notification domain
+	// appLogger.Info(ctx, "Registering notification domain routes", logger.Fields{})
+	// notification.RegisterRoutes(api)
+	// appLogger.Info(ctx, "Notification domain routes registered successfully", logger.Fields{})
+
+	appLogger.Info(ctx, "All domain setup complete", logger.Fields{})
+	return router
+}
+
+// registerAllRoutes handles all domain route registrations in one organized place
+// This keeps the main function clean and makes it easy to add new domains
+func registerAllRoutes(api *gin.RouterGroup, appLogger logger.Logger) {
+	ctx := context.Background()
+
+	// ===== CURRENT DOMAINS =====
+	appLogger.Info(ctx, "Registering health domain routes", logger.Fields{})
+	// Register health module routes
+	// This makes the health module self-contained and responsible for its own routing
+	health.RegisterRoutes(api)
+	appLogger.Info(ctx, "Health domain routes registered successfully", logger.Fields{})
+
+	// ===== FUTURE DOMAINS (TODO) =====
+	// TODO: Add product domain
+	// product.RegisterRoutes(api)
+	//
+	// TODO: Add user domain
+	// user.RegisterRoutes(api)
+	//
+	// TODO: Add compliance domain
+	// compliance.RegisterRoutes(api)
+	//
+	// TODO: Add payment domain
+	// payment.RegisterRoutes(api)
+	//
+	// TODO: Add notification domain
+	// notification.RegisterRoutes(api)
+
+	appLogger.Info(ctx, "All domain routes registered successfully", logger.Fields{})
 }
