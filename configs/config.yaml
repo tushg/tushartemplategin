@@ -13,3 +13,21 @@ log:
   compress: true
   addCaller: true
   addStack: false
+
+database:
+  postgres:
+    host: "localhost"
+    port: 5432
+    name: "tushar_db"
+    username: "postgres"
+    password: "password"
+    sslMode: "disable"
+    maxOpenConns: 25
+    maxIdleConns: 5
+    connMaxLifetime: "5m"
+    connMaxIdleTime: "1m"
+    timeout: "30s"
+    # Production settings
+    maxRetries: 3
+    retryDelay: "1s"
+    healthCheckInterval: "30s"

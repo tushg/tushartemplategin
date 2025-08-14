@@ -9,16 +9,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	// Internal packages for health API
 	"tushartemplategin/internal/health"
 
 	// External packages for configuration, logging, and server
 	"tushartemplategin/pkg/config"
+	"tushartemplategin/pkg/database"
+	"tushartemplategin/pkg/database/postgres"
 	"tushartemplategin/pkg/logger"
 	"tushartemplategin/pkg/middleware"
 	"tushartemplategin/pkg/server"
-
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -49,35 +51,38 @@ func main() {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 
+	// ===== DATABASE INITIALIZATION =====
+	// Step 4: Initialize PostgreSQL database
+	appLogger.Info(context.Background(), "Initializing PostgreSQL database", logger.Fields{})
+
+	db := postgres.NewPostgresDB(&cfg.Database.Postgres, appLogger)
+
+	// Connect to database
+	ctx := context.Background()
+	if err := db.Connect(ctx); err != nil {
+		appLogger.Error(ctx, "Failed to connect to database", logger.Fields{"error": err.Error()})
+		// Continue without database for now
+	} else {
+		appLogger.Info(ctx, "Successfully connected to PostgreSQL", logger.Fields{})
+	}
+
 	// ===== SERVER INITIALIZATION =====
-	// Step 4: Set Gin framework mode based on configuration
+	// Step 5: Set Gin framework mode based on configuration
 	if cfg.Server.Mode == "release" {
 		gin.SetMode(gin.ReleaseMode) // Production mode (no debug info)
 	} else {
 		gin.SetMode(gin.DebugMode) // Development mode (with debug info)
 	}
 
-	// Step 5: Create a new Gin router instance
+	// Step 6: Create a new Gin router instance
 	router := gin.New()
-	//This following line is added to fix the DRP issue.
-	//Need to investigate more on this.
 	router.SetTrustedProxies(nil)
 
 	// ===== DOMAIN SETUP =====
-	// Step 6: Setup domains and middleware
-	router = setupDomainsAndMiddleware(router, appLogger)
+	// Step 7: Setup domains and middleware
+	router = setupDomainsAndMiddleware(router, appLogger, db)
 
-	// Note: Additional middleware can be added here if needed
-	// TODO: Add request logging middleware
-	// router.Use(logger.RequestLogger(appLogger))
-	//
-	// TODO: Add rate limiting middleware
-	// router.Use(middleware.RateLimit())
-	//
-	// TODO: Add authentication middleware
-	// router.Use(middleware.Auth())
-
-	// Step 7: Setup API routes using module-level route registration
+	// Step 8: Setup API routes using module-level route registration
 	api := router.Group("/api/v1") // API version 1 group
 
 	// Register all domain routes in a clean, organized way
@@ -88,7 +93,6 @@ func main() {
 	srv := server.New(cfg.Server.Port, router)
 
 	// Step 10: Start the server in a background goroutine with proper coordination
-	// Use channels to coordinate between server goroutine and main goroutine
 	serverErr := make(chan error, 1)
 	serverStarted := make(chan bool, 1)
 
@@ -116,7 +120,6 @@ func main() {
 	}()
 
 	// Step 11: Wait for either server to start successfully OR fail to start
-	// This prevents the main goroutine from hanging if server fails to start
 	select {
 	case <-serverStarted:
 		appLogger.Info(context.Background(), "Server started successfully", logger.Fields{
@@ -130,7 +133,6 @@ func main() {
 
 	// Step 12: Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
-	// Listen for SIGINT (Ctrl+C) and SIGTERM (termination signal)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	// Wait for either shutdown signal OR server error
@@ -154,24 +156,31 @@ func main() {
 		appLogger.Fatal(context.Background(), "Server forced to shutdown", err, logger.Fields{})
 	}
 
-	// Step 15: Log successful shutdown
+	// Step 15: Disconnect from database
+	if err := db.Disconnect(ctx); err != nil {
+		appLogger.Error(ctx, "Failed to disconnect from database", logger.Fields{"error": err.Error()})
+	} else {
+		appLogger.Info(ctx, "Database disconnected successfully", logger.Fields{})
+	}
+
+	// Step 16: Log successful shutdown
 	appLogger.Info(context.Background(), "Server exited", logger.Fields{})
 }
 
 // setupDomainsAndMiddleware initializes domain-specific components and middleware
-func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger) *gin.Engine {
+func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger, db database.Database) *gin.Engine {
 	ctx := context.Background()
 
 	// ===== SECURITY MIDDLEWARE =====
 	appLogger.Info(ctx, "Setting up security middleware", logger.Fields{})
-	// Add comprehensive security headers (fixes Missing_HSTS_Header DRP issue)
 	router.Use(middleware.SecurityHeaders())
 	appLogger.Info(ctx, "Security middleware setup complete", logger.Fields{})
 
 	// ===== CURRENT DOMAINS =====
 	appLogger.Info(ctx, "Setting up health domain", logger.Fields{})
-	// Create repository (data access layer)
-	healthRepo := health.NewHealthRepository()
+
+	// Create repository (data access layer) - NOW WITH DATABASE
+	healthRepo := health.NewHealthRepository(db, appLogger)
 
 	// Create service (business logic layer)
 	healthService := health.NewHealthService(healthRepo, appLogger)
@@ -183,63 +192,18 @@ func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger) *gin
 	})
 	appLogger.Info(ctx, "Health domain setup complete", logger.Fields{})
 
-	// ===== FUTURE DOMAINS (TODO) =====
-	// TODO: Add product domain
-	// appLogger.Info(ctx, "Registering product domain routes", logger.Fields{})
-	// product.RegisterRoutes(api)
-	// appLogger.Info(ctx, "Product domain routes registered successfully", logger.Fields{})
-	//
-	// TODO: Add user domain
-	// appLogger.Info(ctx, "Registering user domain routes", logger.Fields{})
-	// user.RegisterRoutes(api)
-	// appLogger.Info(ctx, "User domain routes registered successfully", logger.Fields{})
-	//
-	// TODO: Add compliance domain
-	// appLogger.Info(ctx, "Registering compliance domain routes", logger.Fields{})
-	// compliance.RegisterRoutes(api)
-	// appLogger.Info(ctx, "Compliance domain routes registered successfully", logger.Fields{})
-	//
-	// TODO: Add payment domain
-	// appLogger.Info(ctx, "Registering payment domain routes", logger.Fields{})
-	// payment.RegisterRoutes(api)
-	// appLogger.Info(ctx, "Payment domain routes registered successfully", logger.Fields{})
-	//
-	// TODO: Add notification domain
-	// appLogger.Info(ctx, "Registering notification domain routes", logger.Fields{})
-	// notification.RegisterRoutes(api)
-	// appLogger.Info(ctx, "Notification domain routes registered successfully", logger.Fields{})
-
 	appLogger.Info(ctx, "All domain setup complete", logger.Fields{})
 	return router
 }
 
 // registerAllRoutes handles all domain route registrations in one organized place
-// This keeps the main function clean and makes it easy to add new domains
 func registerAllRoutes(api *gin.RouterGroup, appLogger logger.Logger) {
 	ctx := context.Background()
 
 	// ===== CURRENT DOMAINS =====
 	appLogger.Info(ctx, "Registering health domain routes", logger.Fields{})
-	// Register health module routes
-	// This makes the health module self-contained and responsible for its own routing
 	health.RegisterRoutes(api)
 	appLogger.Info(ctx, "Health domain routes registered successfully", logger.Fields{})
-
-	// ===== FUTURE DOMAINS (TODO) =====
-	// TODO: Add product domain
-	// product.RegisterRoutes(api)
-	//
-	// TODO: Add user domain
-	// user.RegisterRoutes(api)
-	//
-	// TODO: Add compliance domain
-	// compliance.RegisterRoutes(api)
-	//
-	// TODO: Add payment domain
-	// payment.RegisterRoutes(api)
-	//
-	// TODO: Add notification domain
-	// notification.RegisterRoutes(api)
 
 	appLogger.Info(ctx, "All domain routes registered successfully", logger.Fields{})
 }
