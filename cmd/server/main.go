@@ -17,7 +17,6 @@ import (
 	// External packages for configuration, logging, and server
 	"tushartemplategin/pkg/config"
 	"tushartemplategin/pkg/database"
-	"tushartemplategin/pkg/database/postgres"
 	"tushartemplategin/pkg/logger"
 	"tushartemplategin/pkg/middleware"
 	"tushartemplategin/pkg/server"
@@ -52,10 +51,21 @@ func main() {
 	}
 
 	// ===== DATABASE INITIALIZATION =====
-	// Step 4: Initialize PostgreSQL database
-	appLogger.Info(context.Background(), "Initializing PostgreSQL database", logger.Fields{})
+	// Step 4: Initialize database using factory pattern
+	appLogger.Info(context.Background(), "Initializing database", logger.Fields{
+		"type": cfg.Database.Type,
+	})
 
-	db := postgres.NewPostgresDB(&cfg.Database.Postgres, appLogger)
+	// Create database factory and instance
+	dbFactory := database.NewDatabaseFactory(appLogger)
+	db, err := dbFactory.CreateDatabase(&cfg.Database)
+	if err != nil {
+		appLogger.Error(context.Background(), "Failed to create database instance", logger.Fields{
+			"error": err.Error(),
+			"type":  cfg.Database.Type,
+		})
+		log.Fatalf("Failed to create database instance: %v", err)
+	}
 
 	// Connect to database
 	ctx := context.Background()
@@ -63,7 +73,9 @@ func main() {
 		appLogger.Error(ctx, "Failed to connect to database", logger.Fields{"error": err.Error()})
 		// Continue without database for now
 	} else {
-		appLogger.Info(ctx, "Successfully connected to PostgreSQL", logger.Fields{})
+		appLogger.Info(ctx, "Successfully connected to database", logger.Fields{
+			"type": cfg.Database.Type,
+		})
 	}
 
 	// ===== SERVER INITIALIZATION =====

@@ -1,5 +1,7 @@
 # Database Layer Architecture Design Document
 
+> **📚 Updated Documentation**: This document focuses on the original database layer architecture. For the complete updated design including the new Database Factory Pattern and latest implementation, see [Database Layer Design v2.0](databaselayerdesign_1.md).
+
 ## Table of Contents
 1. [Overview](#overview)
 2. [Architecture Principles](#architecture-principles)

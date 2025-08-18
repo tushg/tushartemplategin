@@ -1,0 +1,80 @@
+# Example Configuration File for Tushar Template Gin
+# Copy this file to config.yaml and modify as needed
+
+server:
+  port: ":8080"
+  mode: "debug"  # debug, release
+
+log:
+  level: "info"      # debug, info, warn, error, fatal
+  format: "json"     # json, console
+  output: "stdout"   # stdout, file
+  filePath: ""       # Log file path (if output is file)
+  maxSize: 100       # Maximum log file size in MB
+  maxBackup: 3       # Maximum number of backup files
+  maxAge: 28         # Maximum age of log files in days
+  compress: true     # Whether to compress old log files
+  addCaller: true    # Whether to add caller information
+  addStack: false    # Whether to add stack traces
+
+database:
+  # Database type: postgres, sqlite, mysql
+  type: "postgres"
+  
+  # PostgreSQL Configuration
+  postgres:
+    host: "localhost"
+    port: 5432
+    name: "tushar_db"
+    username: "postgres"
+    password: "password"
+    sslMode: "disable"  # disable, require, verify-ca, verify-full
+    maxOpenConns: 25
+    maxIdleConns: 5
+    connMaxLifetime: "5m"
+    connMaxIdleTime: "1m"
+    timeout: "30s"
+    maxRetries: 3
+    retryDelay: "1s"
+    healthCheckInterval: "30s"
+  
+  # SQLite Configuration (for development/testing)
+  sqlite:
+    filePath: "./data/app.db"
+    timeout: "30s"
+    maxOpenConns: 1        # SQLite limitation: only 1 writer
+    maxIdleConns: 1
+    connMaxLifetime: "5m"
+    connMaxIdleTime: "1m"
+    journalMode: "WAL"     # WAL, DELETE, TRUNCATE, PERSIST, MEMORY, OFF
+    syncMode: "NORMAL"     # OFF, NORMAL, FULL, EXTRA
+    cacheSize: 1000        # Cache size in pages
+    foreignKeys: true      # Enable foreign key constraints
+    autoVacuum: "INCREMENTAL"  # NONE, INCREMENTAL, FULL
+    healthCheckInterval: "30s"
+  
+  # MySQL Configuration
+  mysql:
+    host: "localhost"
+    port: 3306
+    name: "tushar_db"
+    username: "root"
+    password: "password"
+    charset: "utf8mb4"     # Character set
+    parseTime: true        # Parse time values
+    loc: "Local"           # Location for time parsing
+    maxOpenConns: 25
+    maxIdleConns: 5
+    connMaxLifetime: "5m"
+    connMaxIdleTime: "1m"
+    timeout: "30s"
+    maxRetries: 3
+    retryDelay: "1s"
+    healthCheckInterval: "30s"
+
+# Environment-specific overrides
+# Use environment variables to override these values:
+# DB_TYPE=sqlite
+# DB_SQLITE_FILE_PATH=/tmp/test.db
+# DB_POSTGRES_HOST=prod-db.example.com
+# DB_POSTGRES_PASSWORD=prod_password

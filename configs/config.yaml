@@ -15,6 +15,7 @@ log:
   addStack: false
 
 database:
+  type: "postgres"  # Supported types: postgres, sqlite, mysql
   postgres:
     host: "localhost"
     port: 5432
