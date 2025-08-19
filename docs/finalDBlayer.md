@@ -101,7 +101,7 @@ This document describes the production-ready, enterprise-grade database layer ar
 ├─────────────────────────────────────────────────────────────┤
 │                Configuration Layer                        │
 │  ┌─────────────────────────────────────────────────────┐  │
-│  │              YAML + Environment                     │  │
+│  │              JSON/YAML + Environment                │  │
 │  │  • Database Type Selection                         │  │
 │  │  • Type-Specific Configuration                     │  │
 │  │  • Environment Variable Overrides                  │  │
@@ -206,7 +206,8 @@ Advanced transaction handling with safety features:
 ### 4. **Configuration Management**
 Centralized configuration with environment support:
 
-- **YAML Configuration**: Human-readable configuration files
+- **JSON Configuration**: Machine-readable, widely supported format (default)
+- **YAML Configuration**: Human-readable configuration files (alternative)
 - **Environment Variables**: Production deployment flexibility
 - **Type Safety**: Strongly-typed configuration structures
 - **Default Values**: Production-ready default settings
@@ -415,6 +416,33 @@ func (df *DatabaseFactory) validatePostgreSQLConfig(cfg *config.PostgresConfig) 
 ## Configuration Management
 
 ### Configuration Structure
+
+#### JSON Configuration (Recommended)
+```json
+{
+  "database": {
+    "type": "postgres",
+    "postgres": {
+      "host": "localhost",
+      "port": 5432,
+      "name": "tushar_db",
+      "username": "postgres",
+      "password": "password",
+      "sslMode": "disable",
+      "maxOpenConns": 25,
+      "maxIdleConns": 5,
+      "connMaxLifetime": "5m",
+      "connMaxIdleTime": "1m",
+      "timeout": "30s",
+      "maxRetries": 3,
+      "retryDelay": "1s",
+      "healthCheckInterval": "30s"
+    }
+  }
+}
+```
+
+#### YAML Configuration (Alternative)
 ```yaml
 database:
   type: "postgres"  # postgres, sqlite, mysql

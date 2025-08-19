@@ -99,7 +99,7 @@ type MySQLConfig struct {
 func Load() (*Config, error) {
 	// Set configuration file name and type
 	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
+	viper.SetConfigType("json") // Changed from "yaml" to "json"
 
 	// Add configuration file search paths
 	viper.AddConfigPath("./configs") // Look in configs directory

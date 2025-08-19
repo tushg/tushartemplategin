@@ -1,0 +1,69 @@
+{
+  "server": {
+    "port": ":8080",
+    "mode": "debug"
+  },
+  "log": {
+    "level": "info",
+    "format": "json",
+    "output": "stdout",
+    "filePath": "",
+    "maxSize": 100,
+    "maxBackup": 3,
+    "maxAge": 28,
+    "compress": true,
+    "addCaller": true,
+    "addStack": false
+  },
+  "database": {
+    "type": "postgres",
+    "postgres": {
+      "host": "localhost",
+      "port": 5432,
+      "name": "tushar_db",
+      "username": "postgres",
+      "password": "password",
+      "sslMode": "disable",
+      "maxOpenConns": 25,
+      "maxIdleConns": 5,
+      "connMaxLifetime": "5m",
+      "connMaxIdleTime": "1m",
+      "timeout": "30s",
+      "maxRetries": 3,
+      "retryDelay": "1s",
+      "healthCheckInterval": "30s"
+    },
+    "sqlite": {
+      "filePath": "./data/app.db",
+      "timeout": "30s",
+      "maxOpenConns": 1,
+      "maxIdleConns": 1,
+      "connMaxLifetime": "5m",
+      "connMaxIdleTime": "1m",
+      "journalMode": "WAL",
+      "syncMode": "NORMAL",
+      "cacheSize": 1000,
+      "foreignKeys": true,
+      "autoVacuum": "INCREMENTAL",
+      "healthCheckInterval": "30s"
+    },
+    "mysql": {
+      "host": "localhost",
+      "port": 3306,
+      "name": "tushar_db",
+      "username": "root",
+      "password": "password",
+      "charset": "utf8mb4",
+      "parseTime": true,
+      "loc": "Local",
+      "maxOpenConns": 25,
+      "maxIdleConns": 5,
+      "connMaxLifetime": "5m",
+      "connMaxIdleTime": "1m",
+      "timeout": "30s",
+      "maxRetries": 3,
+      "retryDelay": "1s",
+      "healthCheckInterval": "30s"
+    }
+  }
+}
