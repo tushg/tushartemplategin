@@ -16,6 +16,18 @@ type Config struct {
 type ServerConfig struct {
 	Port string `mapstructure:"port"` // Server port (e.g., ":8080")
 	Mode string `mapstructure:"mode"` // Server mode (debug/release)
+
+	// SSL/TLS Configuration
+	SSL SSLConfig `mapstructure:"ssl"` // SSL/TLS configuration
+}
+
+// SSLConfig contains SSL/TLS configuration settings
+type SSLConfig struct {
+	Enabled      bool   `mapstructure:"enabled"`      // Enable SSL/TLS
+	Port         string `mapstructure:"port"`         // SSL port (e.g., ":443")
+	CertFile     string `mapstructure:"certFile"`     // Path to SSL certificate file
+	KeyFile      string `mapstructure:"keyFile"`      // Path to SSL private key file
+	RedirectHTTP bool   `mapstructure:"redirectHTTP"` // Redirect HTTP to HTTPS
 }
 
 // LogConfig contains logging configuration settings

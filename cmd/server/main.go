@@ -101,8 +101,16 @@ func main() {
 	registerAllRoutes(api, appLogger)
 
 	// ===== SERVER LIFECYCLE =====
-	// Step 9: Create HTTP server instance with our router
-	srv := server.New(cfg.Server.Port, router)
+	// Step 9: Create server instance with our router and SSL configuration
+	sslConfig := server.SSLConfig{
+		Enabled:      cfg.Server.SSL.Enabled,
+		Port:         cfg.Server.SSL.Port,
+		CertFile:     cfg.Server.SSL.CertFile,
+		KeyFile:      cfg.Server.SSL.KeyFile,
+		RedirectHTTP: cfg.Server.SSL.RedirectHTTP,
+	}
+
+	srv := server.New(cfg.Server.Port, router, sslConfig)
 
 	// Step 10: Start the server in a background goroutine with proper coordination
 	serverErr := make(chan error, 1)

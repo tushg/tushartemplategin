@@ -97,9 +97,48 @@ Configuration is automatically validated on startup:
 - Type-specific configuration validation
 - Environment variable overrides are applied
 
+## SSL/TLS Configuration
+
+The application supports SSL/TLS for secure HTTPS communication:
+
+### SSL Settings
+- **enabled**: Enable/disable SSL/TLS
+- **port**: SSL port (default: :443)
+- **certFile**: Path to SSL certificate file
+- **keyFile**: Path to SSL private key file
+- **redirectHTTP**: Redirect HTTP to HTTPS
+
+### Certificate Setup
+1. **Place your SSL certificate and private key files** in the `certs/` directory
+2. **Update the `certFile` and `keyFile` paths** in your `config.json`
+3. **Set `enabled: true`** to activate SSL/TLS
+4. **Restart the service** to load the new configuration
+
+### Example SSL Configuration
+```json
+{
+  "server": {
+    "ssl": {
+      "enabled": true,
+      "port": ":443",
+      "certFile": "./certs/server.crt",
+      "keyFile": "./certs/server.key",
+      "redirectHTTP": true
+    }
+  }
+}
+```
+
+### Production Certificate Requirements
+- **Valid SSL certificate** from a trusted CA (Let's Encrypt, DigiCert, etc.)
+- **Private key file** in PEM format
+- **Certificate file** in PEM format (including full chain if needed)
+- **Proper file permissions** (600 for key, 644 for cert)
+
 ## Production Considerations
 
 - Use environment variables for sensitive data (passwords, API keys)
 - Keep configuration files in version control (without secrets)
 - Use different configuration files for different environments
 - Validate configuration before deployment
+- **SSL certificates should be stored securely** and not committed to version control

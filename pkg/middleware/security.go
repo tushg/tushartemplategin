@@ -42,7 +42,15 @@ func SecurityHeaders() gin.HandlerFunc {
 		//
 		// Security Impact: Prevents man-in-the-middle attacks, protocol downgrade attacks
 		// DRP Issue Fixed: Missing_HSTS_Header vulnerability
-		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+
+		// Production HSTS with preload support
+		if c.Request.TLS != nil {
+			// HTTPS request - set strong HSTS
+			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+		} else {
+			// HTTP request - set HSTS without preload (allows HTTP to HTTPS redirect)
+			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
 
 		// ===== X-Content-Type-Options =====
 		// Purpose: Prevents MIME type sniffing attacks

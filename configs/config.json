@@ -1,7 +1,14 @@
 {
   "server": {
     "port": ":8080",
-    "mode": "debug"
+    "mode": "debug",
+    "ssl": {
+      "enabled": true,
+      "port": ":443",
+      "certFile": "./certs/server.crt",
+      "keyFile": "./certs/server.key",
+      "redirectHTTP": true
+    }
   },
   "log": {
     "level": "info",
