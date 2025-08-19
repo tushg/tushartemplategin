@@ -29,7 +29,7 @@ Your microservice provides the following REST endpoints:
 2. **Generate self-signed certificate:**
    ```bash
    # Generate self-signed certificate for testing
-   openssl req -x509 -newkey rsa:4096 -keyout certs/server.key -out certs/server.crt -days 365 -nodes -subj "/CN=localhost"
+   openssl req -x509 -newkey rsa:4096 -keyout certs/server.key -out certs/server.crt -days 365 -nodes -subj "//CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
    ```
 
 3. **Set proper permissions:**
