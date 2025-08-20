@@ -311,7 +311,7 @@ flowchart TD
     E --> F{Valid Certificates?}
     F -->|No| G[Log Error & Reject]
     F -->|Yes| H[Establish Secure Connection]
-    H --> I[Gin Router (HTTPS)]
+    H --> I[Gin Router HTTPS]
     I --> J[Security Middleware]
     J --> K[Request Context Setup]
     K --> L[Route Handler]
@@ -326,7 +326,7 @@ flowchart TD
     S -->|No| U[Rollback Transaction]
     T --> V[Format Response]
     U --> W[Error Response]
-    V --> X[Security Headers + HTTPS]
+    V --> X[Security Headers HTTPS]
     W --> X
     X --> Y[HTTPS Response]
     
