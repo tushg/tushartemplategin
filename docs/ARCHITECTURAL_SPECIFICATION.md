@@ -300,7 +300,44 @@ flowchart TD
     style P fill:#ffcdd2
 ```
 
-### **3. Health Check Flow**
+### **3. HTTPS Request Flow**
+
+```mermaid
+flowchart TD
+    A[HTTPS Request] --> B[SSL/TLS Handshake]
+    B --> C{SSL Config Enabled?}
+    C -->|No| D[Fallback to HTTP]
+    C -->|Yes| E[Load SSL Certificates]
+    E --> F{Valid Certificates?}
+    F -->|No| G[Log Error & Reject]
+    F -->|Yes| H[Establish Secure Connection]
+    H --> I[Gin Router (HTTPS)]
+    I --> J[Security Middleware]
+    J --> K[Request Context Setup]
+    K --> L[Route Handler]
+    L --> M[Service Layer]
+    M --> N[Repository Layer]
+    N --> O{Database Operation?}
+    O -->|Yes| P[Transaction Manager]
+    O -->|No| Q[Return Response]
+    P --> R[Execute Query]
+    R --> S{Success?}
+    S -->|Yes| T[Commit Transaction]
+    S -->|No| U[Rollback Transaction]
+    T --> V[Format Response]
+    U --> W[Error Response]
+    V --> X[Security Headers + HTTPS]
+    W --> X
+    X --> Y[HTTPS Response]
+    
+    style A fill:#e1f5fe
+    style Y fill:#c8e6c9
+    style G fill:#ffcdd2
+    style W fill:#ffcdd2
+    style D fill:#fff3e0
+```
+
+### **4. Health Check Flow**
 
 ```mermaid
 flowchart TD
