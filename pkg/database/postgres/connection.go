@@ -7,52 +7,61 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	"tushartemplategin/pkg/config"
-	"tushartemplategin/pkg/logger"
+	"tushartemplategin/pkg/interfaces"
 )
 
 // PostgresDB implements the Database interface for PostgreSQL
 type PostgresDB struct {
-	config *config.PostgresConfig
-	db     *sql.DB
-	logger logger.Logger
+	config interfaces.PostgresConfig
+	db     interfaces.DBInterface
+	logger interfaces.Logger
 }
 
 // NewPostgresDB creates a new PostgreSQL database instance
-func NewPostgresDB(cfg *config.PostgresConfig, log logger.Logger) *PostgresDB {
+func NewPostgresDB(cfg interfaces.PostgresConfig, log interfaces.Logger) *PostgresDB {
 	return &PostgresDB{
 		config: cfg,
 		logger: log,
 	}
 }
 
+// SetTestDB sets the database connection for testing purposes
+func (p *PostgresDB) SetTestDB(db interfaces.DBInterface) {
+	p.db = db
+}
+
+// GetTestDB returns the database interface for testing
+func (p *PostgresDB) GetTestDB() interfaces.DBInterface {
+	return p.db
+}
+
 // Connect establishes a connection to PostgreSQL with retry logic
 func (p *PostgresDB) Connect(ctx context.Context) error {
 	dsn := fmt.Sprintf("host=%s port=%d dbname=%s user=%s password=%s sslmode=%s",
-		p.config.Host, p.config.Port, p.config.Name, p.config.Username, p.config.Password, p.config.SSLMode)
+		p.config.GetHost(), p.config.GetPort(), p.config.GetName(), p.config.GetUsername(), p.config.GetPassword(), p.config.GetSSLMode())
 
 	var db *sql.DB
 	var err error
 
 	// Retry connection with exponential backoff
-	for attempt := 0; attempt <= p.config.MaxRetries; attempt++ {
+	for attempt := 0; attempt <= p.config.GetMaxRetries(); attempt++ {
 		if attempt > 0 {
-			p.logger.Info(ctx, "Retrying database connection", logger.Fields{
+			p.logger.Info(ctx, "Retrying database connection", interfaces.Fields{
 				"attempt":    attempt,
-				"maxRetries": p.config.MaxRetries,
+				"maxRetries": p.config.GetMaxRetries(),
 			})
 
 			// Wait before retry (exponential backoff)
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case <-time.After(p.config.RetryDelay * time.Duration(attempt)):
+			case <-time.After(p.config.GetRetryDelay() * time.Duration(attempt)):
 			}
 		}
 
 		db, err = sql.Open("postgres", dsn)
 		if err != nil {
-			p.logger.Error(ctx, "Failed to open database connection", logger.Fields{
+			p.logger.Error(ctx, "Failed to open database connection", interfaces.Fields{
 				"attempt": attempt,
 				"error":   err.Error(),
 			})
@@ -60,16 +69,16 @@ func (p *PostgresDB) Connect(ctx context.Context) error {
 		}
 
 		// Configure connection pool for production
-		db.SetMaxOpenConns(p.config.MaxOpenConns)
-		db.SetMaxIdleConns(p.config.MaxIdleConns)
-		db.SetConnMaxLifetime(p.config.ConnMaxLifetime)
-		db.SetConnMaxIdleTime(p.config.ConnMaxIdleTime)
+		db.SetMaxOpenConns(p.config.GetMaxOpenConns())
+		db.SetMaxIdleConns(p.config.GetMaxIdleConns())
+		db.SetConnMaxLifetime(p.config.GetConnMaxLifetime())
+		db.SetConnMaxIdleTime(p.config.GetConnMaxIdleTime())
 
 		// Test connection with timeout
-		connCtx, cancel := context.WithTimeout(ctx, p.config.Timeout)
+		connCtx, cancel := context.WithTimeout(ctx, p.config.GetTimeout())
 		if err := db.PingContext(connCtx); err != nil {
 			cancel()
-			p.logger.Error(ctx, "Failed to ping database", logger.Fields{
+			p.logger.Error(ctx, "Failed to ping database", interfaces.Fields{
 				"attempt": attempt,
 				"error":   err.Error(),
 			})
@@ -80,28 +89,28 @@ func (p *PostgresDB) Connect(ctx context.Context) error {
 
 		// Connection successful
 		p.db = db
-		p.logger.Info(ctx, "PostgreSQL connection established", logger.Fields{
-			"host":         p.config.Host,
-			"port":         p.config.Port,
-			"db":           p.config.Name,
-			"maxOpenConns": p.config.MaxOpenConns,
-			"maxIdleConns": p.config.MaxIdleConns,
+		p.logger.Info(ctx, "PostgreSQL connection established", interfaces.Fields{
+			"host":         p.config.GetHost(),
+			"port":         p.config.GetPort(),
+			"db":           p.config.GetName(),
+			"maxOpenConns": p.config.GetMaxOpenConns(),
+			"maxIdleConns": p.config.GetMaxIdleConns(),
 			"attempts":     attempt + 1,
 		})
 		return nil
 	}
 
-	return fmt.Errorf("failed to connect to database after %d attempts: %w", p.config.MaxRetries+1, err)
+	return fmt.Errorf("failed to connect to database after %d attempts: %w", p.config.GetMaxRetries()+1, err)
 }
 
 // Disconnect closes the database connection
 func (p *PostgresDB) Disconnect(ctx context.Context) error {
 	if p.db != nil {
 		if err := p.db.Close(); err != nil {
-			p.logger.Error(ctx, "Failed to close database connection", logger.Fields{"error": err.Error()})
+			p.logger.Error(ctx, "Failed to close database connection", interfaces.Fields{"error": err.Error()})
 			return err
 		}
-		p.logger.Info(ctx, "PostgreSQL connection closed", logger.Fields{})
+		p.logger.Info(ctx, "PostgreSQL connection closed", interfaces.Fields{})
 	}
 	return nil
 }
@@ -120,7 +129,7 @@ func (p *PostgresDB) BeginTx(ctx context.Context) (*sql.Tx, error) {
 		return nil, fmt.Errorf("database not connected")
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, p.config.Timeout)
+	ctx, cancel := context.WithTimeout(ctx, p.config.GetTimeout())
 	defer cancel()
 
 	return p.db.BeginTx(ctx, &sql.TxOptions{
@@ -140,7 +149,7 @@ func (p *PostgresDB) WithTransaction(ctx context.Context, fn func(*sql.Tx) error
 	defer func() {
 		if panicVal := recover(); panicVal != nil {
 			if rbErr := tx.Rollback(); rbErr != nil {
-				p.logger.Error(ctx, "Failed to rollback transaction on panic", logger.Fields{
+				p.logger.Error(ctx, "Failed to rollback transaction on panic", interfaces.Fields{
 					"panic": panicVal,
 					"error": rbErr.Error(),
 				})
@@ -160,11 +169,6 @@ func (p *PostgresDB) WithTransaction(ctx context.Context, fn func(*sql.Tx) error
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	return nil
-}
-
-// Driver returns the underlying sql.DB instance
-func (p *PostgresDB) Driver() *sql.DB {
-	return p.db
 }
 
 // GetConnectionStats returns connection pool statistics for monitoring

@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"time"
 
-	"tushartemplategin/pkg/logger"
+	"tushartemplategin/pkg/interfaces"
 )
 
 // TxManager handles database transactions with proper error handling
 type TxManager struct {
-	db     Database
-	logger logger.Logger
+	db     interfaces.Database
+	logger interfaces.Logger
 }
 
 // NewTxManager creates a new transaction manager
-func NewTxManager(db Database, log logger.Logger) *TxManager {
+func NewTxManager(db interfaces.Database, log interfaces.Logger) *TxManager {
 	return &TxManager{
 		db:     db,
 		logger: log,
@@ -39,7 +39,7 @@ func (tm *TxManager) WithReadOnlyTransaction(ctx context.Context, fn func(*sql.T
 	defer func() {
 		if p := recover(); p != nil {
 			if rbErr := tx.Rollback(); rbErr != nil {
-				tm.logger.Error(ctx, "Failed to rollback read-only transaction on panic", logger.Fields{
+				tm.logger.Error(ctx, "Failed to rollback read-only transaction on panic", interfaces.Fields{
 					"panic": p,
 					"error": rbErr.Error(),
 				})

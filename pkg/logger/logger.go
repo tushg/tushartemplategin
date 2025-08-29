@@ -8,15 +8,16 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
+	"tushartemplategin/pkg/interfaces"
 )
 
 // Logger defines the interface for logging operations
 type Logger interface {
-	Debug(ctx context.Context, msg string, fields Fields)            // Log debug message
-	Info(ctx context.Context, msg string, fields Fields)             // Log info message
-	Warn(ctx context.Context, msg string, fields Fields)             // Log warning message
-	Error(ctx context.Context, msg string, fields Fields)            // Log error message
-	Fatal(ctx context.Context, msg string, err error, fields Fields) // Log fatal message and exit
+	Debug(ctx context.Context, msg string, fields interfaces.Fields)            // Log debug message
+	Info(ctx context.Context, msg string, fields interfaces.Fields)             // Log info message
+	Warn(ctx context.Context, msg string, fields interfaces.Fields)             // Log warning message
+	Error(ctx context.Context, msg string, fields interfaces.Fields)            // Log error message
+	Fatal(ctx context.Context, msg string, err error, fields interfaces.Fields) // Log fatal message and exit
 }
 
 // logger implements the Logger interface using zap
@@ -94,27 +95,27 @@ func NewLogger(config *Config) (Logger, error) {
 }
 
 // Debug logs a debug message with optional fields
-func (l *logger) Debug(ctx context.Context, msg string, fields Fields) {
+func (l *logger) Debug(ctx context.Context, msg string, fields interfaces.Fields) {
 	l.zapLogger.Debug(msg, convertFields(fields)...)
 }
 
 // Info logs an info message with optional fields
-func (l *logger) Info(ctx context.Context, msg string, fields Fields) {
+func (l *logger) Info(ctx context.Context, msg string, fields interfaces.Fields) {
 	l.zapLogger.Info(msg, convertFields(fields)...)
 }
 
 // Warn logs a warning message with optional fields
-func (l *logger) Warn(ctx context.Context, msg string, fields Fields) {
+func (l *logger) Warn(ctx context.Context, msg string, fields interfaces.Fields) {
 	l.zapLogger.Warn(msg, convertFields(fields)...)
 }
 
 // Error logs an error message with optional fields
-func (l *logger) Error(ctx context.Context, msg string, fields Fields) {
+func (l *logger) Error(ctx context.Context, msg string, fields interfaces.Fields) {
 	l.zapLogger.Error(msg, convertFields(fields)...)
 }
 
 // Fatal logs a fatal message and exits the program
-func (l *logger) Fatal(ctx context.Context, msg string, err error, fields Fields) {
+func (l *logger) Fatal(ctx context.Context, msg string, err error, fields interfaces.Fields) {
 	if err != nil {
 		fields["error"] = err.Error() // Add error message to fields
 	}
@@ -122,7 +123,7 @@ func (l *logger) Fatal(ctx context.Context, msg string, err error, fields Fields
 }
 
 // convertFields converts our Fields type to zap.Field slice
-func convertFields(fields Fields) []zap.Field {
+func convertFields(fields interfaces.Fields) []zap.Field {
 	var zapFields []zap.Field
 	for k, v := range fields {
 		zapFields = append(zapFields, zap.Any(k, v))

@@ -2,37 +2,38 @@ package health
 
 import (
 	"context"
-	"tushartemplategin/pkg/logger"
+
+	"tushartemplategin/pkg/interfaces"
 )
 
-// service implements the Service interface
-type service struct {
-	repo   Repository    // Health repository for data access
-	logger logger.Logger // Logger for recording operations
+// HealthService implements the Service interface for health business logic
+type HealthService struct {
+	repo   Repository
+	logger interfaces.Logger
 }
 
-// NewHealthService creates a new health service instance
-func NewHealthService(repo Repository, logger logger.Logger) Service {
-	return &service{
+// NewHealthService creates a new health service
+func NewHealthService(repo Repository, log interfaces.Logger) Service {
+	return &HealthService{
 		repo:   repo,
-		logger: logger,
+		logger: log,
 	}
 }
 
-// GetHealth retrieves the overall health status and logs the operation
-func (s *service) GetHealth(ctx context.Context) (*HealthStatus, error) {
-	s.logger.Info(ctx, "Health check requested", logger.Fields{})
+// GetHealth returns the overall health status
+func (s *HealthService) GetHealth(ctx context.Context) (*HealthStatus, error) {
+	s.logger.Info(ctx, "Getting health status", interfaces.Fields{})
 	return s.repo.GetHealth(ctx)
 }
 
-// GetReadiness retrieves the readiness status and logs the operation
-func (s *service) GetReadiness(ctx context.Context) (*ReadinessStatus, error) {
-	s.logger.Info(ctx, "Readiness check requested", logger.Fields{})
+// GetReadiness returns the readiness status for Kubernetes readiness probes
+func (s *HealthService) GetReadiness(ctx context.Context) (*ReadinessStatus, error) {
+	s.logger.Info(ctx, "Getting readiness status", interfaces.Fields{})
 	return s.repo.GetReadiness(ctx)
 }
 
-// GetLiveness retrieves the liveness status and logs the operation
-func (s *service) GetLiveness(ctx context.Context) (*LivenessStatus, error) {
-	s.logger.Info(ctx, "Liveness check requested", logger.Fields{})
+// GetLiveness returns the liveness status for Kubernetes liveness probes
+func (s *HealthService) GetLiveness(ctx context.Context) (*LivenessStatus, error) {
+	s.logger.Info(ctx, "Getting liveness status", interfaces.Fields{})
 	return s.repo.GetLiveness(ctx)
 }

@@ -17,6 +17,7 @@ import (
 	// External packages for configuration, logging, and server
 	"tushartemplategin/pkg/config"
 	"tushartemplategin/pkg/database"
+	"tushartemplategin/pkg/interfaces"
 	"tushartemplategin/pkg/logger"
 	"tushartemplategin/pkg/middleware"
 	"tushartemplategin/pkg/server"
@@ -52,7 +53,7 @@ func main() {
 
 	// ===== DATABASE INITIALIZATION =====
 	// Step 4: Initialize database using factory pattern
-	appLogger.Info(context.Background(), "Initializing database", logger.Fields{
+	appLogger.Info(context.Background(), "Initializing database", interfaces.Fields{
 		"type": cfg.Database.Type,
 	})
 
@@ -60,7 +61,7 @@ func main() {
 	dbFactory := database.NewDatabaseFactory(appLogger)
 	db, err := dbFactory.CreateDatabase(&cfg.Database)
 	if err != nil {
-		appLogger.Error(context.Background(), "Failed to create database instance", logger.Fields{
+		appLogger.Error(context.Background(), "Failed to create database instance", interfaces.Fields{
 			"error": err.Error(),
 			"type":  cfg.Database.Type,
 		})
@@ -70,10 +71,10 @@ func main() {
 	// Connect to database
 	ctx := context.Background()
 	if err := db.Connect(ctx); err != nil {
-		appLogger.Error(ctx, "Failed to connect to database", logger.Fields{"error": err.Error()})
+		appLogger.Error(ctx, "Failed to connect to database", interfaces.Fields{"error": err.Error()})
 		// Continue without database for now
 	} else {
-		appLogger.Info(ctx, "Successfully connected to database", logger.Fields{
+		appLogger.Info(ctx, "Successfully connected to database", interfaces.Fields{
 			"type": cfg.Database.Type,
 		})
 	}
@@ -92,7 +93,7 @@ func main() {
 
 	// ===== DOMAIN SETUP =====
 	// Step 7: Setup domains and middleware
-	router = setupDomainsAndMiddleware(router, appLogger, db)
+	router = setupDomainsAndMiddleware(router, appLogger)
 
 	// Step 8: Setup API routes using module-level route registration
 	api := router.Group("/api/v1") // API version 1 group
@@ -117,7 +118,7 @@ func main() {
 	serverStarted := make(chan bool, 1)
 
 	go func() {
-		appLogger.Info(context.Background(), "Starting TUSHAR TEMPLATE GIN...", logger.Fields{
+		appLogger.Info(context.Background(), "Starting TUSHAR TEMPLATE GIN...", interfaces.Fields{
 			"port": cfg.Server.Port, // Log the port we're starting on
 			"mode": cfg.Server.Mode, // Log the server mode
 		})
@@ -127,7 +128,7 @@ func main() {
 
 		// Start listening for HTTP requests
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			appLogger.Error(context.Background(), "Server failed to start", logger.Fields{
+			appLogger.Error(context.Background(), "Server failed to start", interfaces.Fields{
 				"port":  cfg.Server.Port,
 				"error": err.Error(),
 			})
@@ -142,11 +143,11 @@ func main() {
 	// Step 11: Wait for either server to start successfully OR fail to start
 	select {
 	case <-serverStarted:
-		appLogger.Info(context.Background(), "Server started successfully", logger.Fields{
+		appLogger.Info(context.Background(), "Server started successfully", interfaces.Fields{
 			"port": cfg.Server.Port,
 		})
 	case err := <-serverErr:
-		appLogger.Fatal(context.Background(), "Server failed to start, exiting", err, logger.Fields{
+		appLogger.Fatal(context.Background(), "Server failed to start, exiting", err, interfaces.Fields{
 			"port": cfg.Server.Port,
 		})
 	}
@@ -158,14 +159,14 @@ func main() {
 	// Wait for either shutdown signal OR server error
 	select {
 	case <-quit:
-		appLogger.Info(context.Background(), "Shutdown signal received", logger.Fields{})
+		appLogger.Info(context.Background(), "Shutdown signal received", interfaces.Fields{})
 	case err := <-serverErr:
-		appLogger.Error(context.Background(), "Server encountered error, shutting down", logger.Fields{
+		appLogger.Error(context.Background(), "Server encountered error, shutting down", interfaces.Fields{
 			"error": err.Error(),
 		})
 	}
 
-	appLogger.Info(context.Background(), "Shutting down server", logger.Fields{})
+	appLogger.Info(context.Background(), "Shutting down server", interfaces.Fields{})
 
 	// Step 13: Create a deadline for server shutdown (30 seconds)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -173,34 +174,34 @@ func main() {
 
 	// Step 14: Attempt graceful shutdown
 	if err := srv.Shutdown(ctx); err != nil {
-		appLogger.Fatal(context.Background(), "Server forced to shutdown", err, logger.Fields{})
+		appLogger.Fatal(context.Background(), "Server forced to shutdown", err, interfaces.Fields{})
 	}
 
 	// Step 15: Disconnect from database
 	if err := db.Disconnect(ctx); err != nil {
-		appLogger.Error(ctx, "Failed to disconnect from database", logger.Fields{"error": err.Error()})
+		appLogger.Error(ctx, "Failed to disconnect from database", interfaces.Fields{"error": err.Error()})
 	} else {
-		appLogger.Info(ctx, "Database disconnected successfully", logger.Fields{})
+		appLogger.Info(ctx, "Database disconnected successfully", interfaces.Fields{})
 	}
 
 	// Step 16: Log successful shutdown
-	appLogger.Info(context.Background(), "Server exited", logger.Fields{})
+	appLogger.Info(context.Background(), "Server exited", interfaces.Fields{})
 }
 
 // setupDomainsAndMiddleware initializes domain-specific components and middleware
-func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger, db database.Database) *gin.Engine {
+func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger) *gin.Engine {
 	ctx := context.Background()
 
 	// ===== SECURITY MIDDLEWARE =====
-	appLogger.Info(ctx, "Setting up security middleware", logger.Fields{})
+	appLogger.Info(ctx, "Setting up security middleware", interfaces.Fields{})
 	router.Use(middleware.SecurityHeaders())
-	appLogger.Info(ctx, "Security middleware setup complete", logger.Fields{})
+	appLogger.Info(ctx, "Security middleware setup complete", interfaces.Fields{})
 
 	// ===== CURRENT DOMAINS =====
-	appLogger.Info(ctx, "Setting up health domain", logger.Fields{})
+	appLogger.Info(ctx, "Setting up health domain", interfaces.Fields{})
 
-	// Create repository (data access layer) - NOW WITH DATABASE
-	healthRepo := health.NewHealthRepository(db, appLogger)
+	// Create repository (data access layer) - NO DATABASE REQUIRED
+	healthRepo := health.NewHealthRepository(appLogger)
 
 	// Create service (business logic layer)
 	healthService := health.NewHealthService(healthRepo, appLogger)
@@ -210,9 +211,9 @@ func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger, db d
 		c.Set("healthService", healthService)
 		c.Next()
 	})
-	appLogger.Info(ctx, "Health domain setup complete", logger.Fields{})
+	appLogger.Info(ctx, "Health domain setup complete", interfaces.Fields{})
 
-	appLogger.Info(ctx, "All domain setup complete", logger.Fields{})
+	appLogger.Info(ctx, "All domain setup complete", interfaces.Fields{})
 	return router
 }
 
@@ -221,9 +222,9 @@ func registerAllRoutes(api *gin.RouterGroup, appLogger logger.Logger) {
 	ctx := context.Background()
 
 	// ===== CURRENT DOMAINS =====
-	appLogger.Info(ctx, "Registering health domain routes", logger.Fields{})
+	appLogger.Info(ctx, "Registering health domain routes", interfaces.Fields{})
 	health.RegisterRoutes(api)
-	appLogger.Info(ctx, "Health domain routes registered successfully", logger.Fields{})
+	appLogger.Info(ctx, "Health domain routes registered successfully", interfaces.Fields{})
 
-	appLogger.Info(ctx, "All domain routes registered successfully", logger.Fields{})
+	appLogger.Info(ctx, "All domain routes registered successfully", interfaces.Fields{})
 }

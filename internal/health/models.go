@@ -1,26 +1,28 @@
 package health
 
-import "time"
+import (
+	"time"
+)
 
-// HealthStatus represents the overall health status of the service
+// HealthStatus represents the health status of a service
 type HealthStatus struct {
-	Status    string    `json:"status"`    // Service status (healthy, unhealthy)
-	Timestamp time.Time `json:"timestamp"` // When the health check was performed
-	Service   string    `json:"service"`   // Service name identifier
-	Version   string    `json:"version"`   // Service version
+	Status    string    `json:"status"`
+	Timestamp time.Time `json:"timestamp"`
+	Service   string    `json:"service"`
+	Version   string    `json:"version"`
 }
 
-// ReadinessStatus represents the readiness status for Kubernetes readiness probes
+// ReadinessStatus represents the readiness status of a service
 type ReadinessStatus struct {
-	Status    string    `json:"status"`    // Readiness status (ready, not ready)
-	Timestamp time.Time `json:"timestamp"` // When the readiness check was performed
-	Database  string    `json:"database"`  // Database connection status
-	Service   string    `json:"service"`   // Service name identifier
+	Status    string    `json:"status"`
+	Timestamp time.Time `json:"timestamp"`
+	Database  string    `json:"database"`
+	Service   string    `json:"service"`
 }
 
-// LivenessStatus represents the liveness status for Kubernetes liveness probes
+// LivenessStatus represents the liveness status of a service
 type LivenessStatus struct {
-	Status    string    `json:"status"`    // Liveness status (alive, dead)
-	Timestamp time.Time `json:"timestamp"` // When the liveness check was performed
-	Service   string    `json:"service"`   // Service name identifier
+	Status    string    `json:"status"`
+	Timestamp time.Time `json:"timestamp"`
+	Service   string    `json:"service"`
 }

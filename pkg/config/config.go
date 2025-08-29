@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/spf13/viper"
 	"time"
+	"tushartemplategin/pkg/interfaces"
 )
 
 // Config represents the main application configuration structure
@@ -52,6 +53,35 @@ type DatabaseConfig struct {
 	MySQL    *MySQLConfig    `mapstructure:"mysql"`    // MySQL-specific configuration
 }
 
+// GetType returns the database type
+func (dc *DatabaseConfig) GetType() string {
+	return dc.Type
+}
+
+// GetPostgres returns the PostgreSQL configuration
+func (dc *DatabaseConfig) GetPostgres() interfaces.PostgresConfig {
+	if dc.Postgres == nil {
+		return nil
+	}
+	return dc.Postgres
+}
+
+// GetSQLite returns the SQLite configuration
+func (dc *DatabaseConfig) GetSQLite() interfaces.SQLiteConfig {
+	if dc.SQLite == nil {
+		return nil
+	}
+	return dc.SQLite
+}
+
+// GetMySQL returns the MySQL configuration
+func (dc *DatabaseConfig) GetMySQL() interfaces.MySQLConfig {
+	if dc.MySQL == nil {
+		return nil
+	}
+	return dc.MySQL
+}
+
 // PostgresConfig contains PostgreSQL-specific configuration
 type PostgresConfig struct {
 	Host                string        `mapstructure:"host"`
@@ -70,6 +100,45 @@ type PostgresConfig struct {
 	HealthCheckInterval time.Duration `mapstructure:"healthCheckInterval"`
 }
 
+// GetHost returns the host
+func (pc *PostgresConfig) GetHost() string { return pc.Host }
+
+// GetPort returns the port
+func (pc *PostgresConfig) GetPort() int { return pc.Port }
+
+// GetName returns the database name
+func (pc *PostgresConfig) GetName() string { return pc.Name }
+
+// GetUsername returns the username
+func (pc *PostgresConfig) GetUsername() string { return pc.Username }
+
+// GetPassword returns the password
+func (pc *PostgresConfig) GetPassword() string { return pc.Password }
+
+// GetSSLMode returns the SSL mode
+func (pc *PostgresConfig) GetSSLMode() string { return pc.SSLMode }
+
+// GetMaxRetries returns the maximum retries
+func (pc *PostgresConfig) GetMaxRetries() int { return pc.MaxRetries }
+
+// GetRetryDelay returns the retry delay
+func (pc *PostgresConfig) GetRetryDelay() time.Duration { return pc.RetryDelay }
+
+// GetTimeout returns the timeout
+func (pc *PostgresConfig) GetTimeout() time.Duration { return pc.Timeout }
+
+// GetMaxOpenConns returns the maximum open connections
+func (pc *PostgresConfig) GetMaxOpenConns() int { return pc.MaxOpenConns }
+
+// GetMaxIdleConns returns the maximum idle connections
+func (pc *PostgresConfig) GetMaxIdleConns() int { return pc.MaxIdleConns }
+
+// GetConnMaxLifetime returns the connection max lifetime
+func (pc *PostgresConfig) GetConnMaxLifetime() time.Duration { return pc.ConnMaxLifetime }
+
+// GetConnMaxIdleTime returns the connection max idle time
+func (pc *PostgresConfig) GetConnMaxIdleTime() time.Duration { return pc.ConnMaxIdleTime }
+
 // SQLiteConfig contains SQLite-specific configuration
 type SQLiteConfig struct {
 	FilePath            string        `mapstructure:"filePath"`            // Database file path
@@ -85,6 +154,12 @@ type SQLiteConfig struct {
 	AutoVacuum          string        `mapstructure:"autoVacuum"`          // Auto vacuum mode (NONE, INCREMENTAL, FULL)
 	HealthCheckInterval time.Duration `mapstructure:"healthCheckInterval"` // Health check interval
 }
+
+// GetPath returns the file path
+func (sc *SQLiteConfig) GetPath() string { return sc.FilePath }
+
+// GetTimeout returns the timeout
+func (sc *SQLiteConfig) GetTimeout() time.Duration { return sc.Timeout }
 
 // MySQLConfig contains MySQL-specific configuration
 type MySQLConfig struct {
@@ -105,6 +180,24 @@ type MySQLConfig struct {
 	RetryDelay          time.Duration `mapstructure:"retryDelay"`
 	HealthCheckInterval time.Duration `mapstructure:"healthCheckInterval"`
 }
+
+// GetHost returns the host
+func (mc *MySQLConfig) GetHost() string { return mc.Host }
+
+// GetPort returns the port
+func (mc *MySQLConfig) GetPort() int { return mc.Port }
+
+// GetName returns the database name
+func (mc *MySQLConfig) GetName() string { return mc.Name }
+
+// GetUsername returns the username
+func (mc *MySQLConfig) GetUsername() string { return mc.Username }
+
+// GetPassword returns the password
+func (mc *MySQLConfig) GetPassword() string { return mc.Password }
+
+// GetTimeout returns the timeout
+func (mc *MySQLConfig) GetTimeout() time.Duration { return mc.Timeout }
 
 // Load reads configuration from config files and environment variables
 // Returns a Config struct or an error if configuration cannot be loaded

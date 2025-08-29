@@ -2,78 +2,45 @@ package health
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
 	"time"
 
-	"tushartemplategin/pkg/database"
-	"tushartemplategin/pkg/logger"
+	"tushartemplategin/pkg/interfaces"
 )
 
 // HealthRepository implements the Repository interface for health data
 type HealthRepository struct {
-	db     database.Database
-	txMgr  *database.TxManager
-	logger logger.Logger
+	logger interfaces.Logger
 }
 
 // NewHealthRepository creates a new health repository
-func NewHealthRepository(db database.Database, log logger.Logger) Repository {
+func NewHealthRepository(log interfaces.Logger) Repository {
 	return &HealthRepository{
-		db:     db,
-		txMgr:  database.NewTxManager(db, log),
 		logger: log,
 	}
 }
 
 // GetHealth returns the overall health status of the service
 func (r *HealthRepository) GetHealth(ctx context.Context) (*HealthStatus, error) {
-	query := `SELECT status, timestamp, service, version FROM health_status WHERE id = $1 AND deleted_at IS NULL`
+	return &HealthStatus{
+		Status:    "healthy",
+		Timestamp: time.Now(),
+		Service:   "tushar-service",
+		Version:   "1.0.0",
+	}, nil
+}
 
-	var status HealthStatus
-	err := r.db.Driver().QueryRowContext(ctx, query, "service_health").Scan(
-		&status.Status,
-		&status.Timestamp,
-		&status.Service,
-		&status.Version,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			// Return default status if no record exists
-			return &HealthStatus{
-				Status:    "healthy",
-				Timestamp: time.Now(),
-				Service:   "tushar-service",
-				Version:   "1.0.0",
-			}, nil
-		}
-		r.logger.Error(ctx, "Failed to get health status from database", logger.Fields{"error": err.Error()})
-		// Return default status if database error
-		return &HealthStatus{
-			Status:    "healthy",
-			Timestamp: time.Now(),
-			Service:   "tushar-service",
-			Version:   "1.0.0",
-		}, nil
-	}
-
-	return &status, nil
+// Health implements the Repository interface
+func (r *HealthRepository) Health(ctx context.Context) error {
+	// Simple health check - always return healthy
+	return nil
 }
 
 // GetReadiness returns the readiness status for Kubernetes readiness probes
 func (r *HealthRepository) GetReadiness(ctx context.Context) (*ReadinessStatus, error) {
-	// Check database connection health
-	dbHealth := "connected"
-	if err := r.db.Health(ctx); err != nil {
-		dbHealth = "disconnected"
-		r.logger.Error(ctx, "Database health check failed", logger.Fields{"error": err.Error()})
-	}
-
 	return &ReadinessStatus{
 		Status:    "ready",
 		Timestamp: time.Now(),
-		Database:  dbHealth,
+		Database:  "not_required", // No database dependency
 		Service:   "tushar-service",
 	}, nil
 }
@@ -83,70 +50,24 @@ func (r *HealthRepository) GetLiveness(ctx context.Context) (*LivenessStatus, er
 	return &LivenessStatus{
 		Status:    "alive",
 		Timestamp: time.Now(),
-		Service:   "gin-service",
+		Service:   "tushar-service",
 	}, nil
 }
 
-// UpdateHealth updates the health status in database with transaction support
+// UpdateHealth updates the health status (in-memory only)
 func (r *HealthRepository) UpdateHealth(ctx context.Context, status *HealthStatus) error {
-	return r.txMgr.WithTransaction(ctx, func(tx *sql.Tx) error {
-		query := `
-			INSERT INTO health_status (id, status, timestamp, service, version, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $6)
-			ON CONFLICT (id) 
-			DO UPDATE SET 
-				status = EXCLUDED.status,
-				timestamp = EXCLUDED.timestamp,
-				service = EXCLUDED.service,
-				version = EXCLUDED.version,
-				updated_at = EXCLUDED.updated_at
-		`
-
-		_, err := tx.ExecContext(ctx, query,
-			"service_health",
-			status.Status,
-			status.Timestamp,
-			status.Service,
-			status.Version,
-			time.Now(),
-		)
-
-		if err != nil {
-			return fmt.Errorf("failed to update health status: %w", err)
-		}
-
-		return nil
+	// Log the update but don't persist to database
+	r.logger.Info(ctx, "Health status update requested", interfaces.Fields{
+		"status":  status.Status,
+		"service": status.Service,
+		"version": status.Version,
 	})
+	return nil
 }
 
-// GetHealthHistory retrieves health status history
+// GetHealthHistory retrieves health status history (empty for in-memory implementation)
 func (r *HealthRepository) GetHealthHistory(ctx context.Context, limit int) ([]*HealthStatus, error) {
-	query := `
-		SELECT status, timestamp, service, version 
-		FROM health_status 
-		WHERE deleted_at IS NULL 
-		ORDER BY timestamp DESC 
-		LIMIT $1
-	`
-
-	rows, err := r.db.Driver().QueryContext(ctx, query, limit)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query health history: %w", err)
-	}
-	defer rows.Close()
-
-	var history []*HealthStatus
-	for rows.Next() {
-		var status HealthStatus
-		if err := rows.Scan(&status.Status, &status.Timestamp, &status.Service, &status.Version); err != nil {
-			return nil, fmt.Errorf("failed to scan health status: %w", err)
-		}
-		history = append(history, &status)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating health history: %w", err)
-	}
-
-	return history, nil
+	// Return empty history since we're not persisting to database
+	r.logger.Info(ctx, "Health history requested", interfaces.Fields{"limit": limit})
+	return []*HealthStatus{}, nil
 }

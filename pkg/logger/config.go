@@ -25,6 +25,3 @@ const (
 	ErrorLevel              // 3: Error level for error messages
 	FatalLevel              // 4: Fatal level for fatal errors (will exit program)
 )
-
-// Fields represents key-value pairs for structured logging
-type Fields map[string]interface{}
