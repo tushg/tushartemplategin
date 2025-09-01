@@ -19,3 +19,14 @@ const (
 	ERROR_READINESS_FAILED     = "Failed to get readiness status"
 	ERROR_LIVENESS_FAILED      = "Failed to get liveness status"
 )
+
+// Product Registration Error Messages
+const (
+	ERROR_PRODUCT_NOT_FOUND     = "Product not found"
+	ERROR_PRODUCT_SKU_EXISTS    = "Product with this SKU already exists"
+	ERROR_PRODUCT_CREATE_FAILED = "Failed to create product"
+	ERROR_PRODUCT_UPDATE_FAILED = "Failed to update product"
+	ERROR_PRODUCT_DELETE_FAILED = "Failed to delete product"
+	ERROR_PRODUCT_LIST_FAILED   = "Failed to list products"
+	ERROR_INVALID_STOCK         = "Invalid stock quantity"
+)

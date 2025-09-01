@@ -1,0 +1,333 @@
+package productregistration
+
+import (
+	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"tushartemplategin/pkg/constants"
+)
+
+// RegisterRoutes registers all product registration-related routes to the given router group
+func RegisterRoutes(router *gin.RouterGroup) {
+	// Create a product registration group under the main API group
+	// This will create routes like /api/v1/products, /api/v1/products/:id, etc.
+	productGroup := router.Group("/products")
+	{
+		// Register product endpoints with their handlers
+		// Each endpoint is clearly defined and easy to maintain
+
+		// POST /products - Create a new product
+		productGroup.POST("", createProductHandler)
+
+		// GET /products - List all products with pagination and filtering
+		productGroup.GET("", listProductsHandler)
+
+		// GET /products/:id - Get a specific product by ID
+		productGroup.GET("/:id", getProductHandler)
+
+		// PUT /products/:id - Update a specific product
+		productGroup.PUT("/:id", updateProductHandler)
+
+		// DELETE /products/:id - Delete a specific product
+		productGroup.DELETE("/:id", deleteProductHandler)
+
+		// GET /products/sku/:sku - Get a product by SKU
+		productGroup.GET("/sku/:sku", getProductBySKUHandler)
+
+		// PATCH /products/:id/stock - Update product stock
+		productGroup.PATCH("/:id/stock", updateStockHandler)
+	}
+}
+
+// createProductHandler handles product creation requests
+func createProductHandler(c *gin.Context) {
+	// Get the product service from the context
+	productService := c.MustGet("productService").(Service)
+
+	ctx := c.Request.Context()
+
+	// Parse request body
+	var req CreateProductRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   constants.ERROR_400_BAD_REQUEST,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Create product through service layer
+	product, err := productService.CreateProduct(ctx, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Return created product with 201 Created
+	c.JSON(http.StatusCreated, ProductResponse{Product: *product})
+}
+
+// listProductsHandler handles product listing requests
+func listProductsHandler(c *gin.Context) {
+	// Get the product service from the context
+	productService := c.MustGet("productService").(Service)
+
+	ctx := c.Request.Context()
+
+	// Parse query parameters
+	var req ProductListRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   constants.ERROR_400_BAD_REQUEST,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// List products through service layer
+	response, err := productService.ListProducts(ctx, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Return product list with 200 OK
+	c.JSON(http.StatusOK, response)
+}
+
+// getProductHandler handles getting a specific product by ID
+func getProductHandler(c *gin.Context) {
+	// Get the product service from the context
+	productService := c.MustGet("productService").(Service)
+
+	ctx := c.Request.Context()
+
+	// Parse product ID from URL parameter
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   constants.ERROR_400_BAD_REQUEST,
+			"details": "Invalid product ID",
+		})
+		return
+	}
+
+	// Get product through service layer
+	product, err := productService.GetProduct(ctx, id)
+	if err != nil {
+		// Check if it's a "not found" error
+		if err.Error() == "product with id "+idStr+" not found" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   constants.ERROR_404_NOT_FOUND,
+				"details": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Return product with 200 OK
+	c.JSON(http.StatusOK, ProductResponse{Product: *product})
+}
+
+// updateProductHandler handles product update requests
+func updateProductHandler(c *gin.Context) {
+	// Get the product service from the context
+	productService := c.MustGet("productService").(Service)
+
+	ctx := c.Request.Context()
+
+	// Parse product ID from URL parameter
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   constants.ERROR_400_BAD_REQUEST,
+			"details": "Invalid product ID",
+		})
+		return
+	}
+
+	// Parse request body
+	var req UpdateProductRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   constants.ERROR_400_BAD_REQUEST,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Update product through service layer
+	product, err := productService.UpdateProduct(ctx, id, &req)
+	if err != nil {
+		// Check if it's a "not found" error
+		if err.Error() == "product with id "+idStr+" not found" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   constants.ERROR_404_NOT_FOUND,
+				"details": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Return updated product with 200 OK
+	c.JSON(http.StatusOK, ProductResponse{Product: *product})
+}
+
+// deleteProductHandler handles product deletion requests
+func deleteProductHandler(c *gin.Context) {
+	// Get the product service from the context
+	productService := c.MustGet("productService").(Service)
+
+	ctx := c.Request.Context()
+
+	// Parse product ID from URL parameter
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   constants.ERROR_400_BAD_REQUEST,
+			"details": "Invalid product ID",
+		})
+		return
+	}
+
+	// Delete product through service layer
+	err = productService.DeleteProduct(ctx, id)
+	if err != nil {
+		// Check if it's a "not found" error
+		if err.Error() == "product with id "+idStr+" not found" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   constants.ERROR_404_NOT_FOUND,
+				"details": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Return success with 204 No Content
+	c.Status(http.StatusNoContent)
+}
+
+// getProductBySKUHandler handles getting a product by SKU
+func getProductBySKUHandler(c *gin.Context) {
+	// Get the product service from the context
+	productService := c.MustGet("productService").(Service)
+
+	ctx := c.Request.Context()
+
+	// Parse SKU from URL parameter
+	sku := c.Param("sku")
+	if sku == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   constants.ERROR_400_BAD_REQUEST,
+			"details": "SKU parameter is required",
+		})
+		return
+	}
+
+	// Get product through service layer
+	product, err := productService.GetProductBySKU(ctx, sku)
+	if err != nil {
+		// Check if it's a "not found" error
+		if err.Error() == "product with sku "+sku+" not found" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   constants.ERROR_404_NOT_FOUND,
+				"details": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Return product with 200 OK
+	c.JSON(http.StatusOK, ProductResponse{Product: *product})
+}
+
+// updateStockHandler handles product stock update requests
+func updateStockHandler(c *gin.Context) {
+	// Get the product service from the context
+	productService := c.MustGet("productService").(Service)
+
+	ctx := c.Request.Context()
+
+	// Parse product ID from URL parameter
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   constants.ERROR_400_BAD_REQUEST,
+			"details": "Invalid product ID",
+		})
+		return
+	}
+
+	// Parse request body for stock update
+	var req struct {
+		Stock int `json:"stock" binding:"required,min=0"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   constants.ERROR_400_BAD_REQUEST,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Update stock through service layer
+	err = productService.UpdateStock(ctx, id, req.Stock)
+	if err != nil {
+		// Check if it's a "not found" error
+		if err.Error() == "product with id "+idStr+" not found" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   constants.ERROR_404_NOT_FOUND,
+				"details": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Return success with 200 OK
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Stock updated successfully",
+		"id":      id,
+		"stock":   req.Stock,
+	})
+}

@@ -14,6 +14,9 @@ import (
 	// Internal packages for health API
 	"tushartemplategin/internal/health"
 
+	// Internal packages for product registration API
+	"tushartemplategin/internal/domains/productregistration"
+
 	// External packages for configuration, logging, and server
 	"tushartemplategin/pkg/config"
 	"tushartemplategin/pkg/database"
@@ -93,7 +96,7 @@ func main() {
 
 	// ===== DOMAIN SETUP =====
 	// Step 7: Setup domains and middleware
-	router = setupDomainsAndMiddleware(router, appLogger)
+	router = setupDomainsAndMiddleware(router, appLogger, db)
 
 	// Step 8: Setup API routes using module-level route registration
 	api := router.Group("/api/v1") // API version 1 group
@@ -189,7 +192,7 @@ func main() {
 }
 
 // setupDomainsAndMiddleware initializes domain-specific components and middleware
-func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger) *gin.Engine {
+func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger, db interfaces.Database) *gin.Engine {
 	ctx := context.Background()
 
 	// ===== SECURITY MIDDLEWARE =====
@@ -213,6 +216,22 @@ func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger) *gin
 	})
 	appLogger.Info(ctx, "Health domain setup complete", interfaces.Fields{})
 
+	// ===== PRODUCT REGISTRATION DOMAIN =====
+	appLogger.Info(ctx, "Setting up product registration domain", interfaces.Fields{})
+
+	// Create product repository (data access layer) - REQUIRES DATABASE
+	productRepo := productregistration.NewProductRepository(db, appLogger)
+
+	// Create product service (business logic layer)
+	productService := productregistration.NewProductService(productRepo, appLogger)
+
+	// Add product service to context so routes can access it
+	router.Use(func(c *gin.Context) {
+		c.Set("productService", productService)
+		c.Next()
+	})
+	appLogger.Info(ctx, "Product registration domain setup complete", interfaces.Fields{})
+
 	appLogger.Info(ctx, "All domain setup complete", interfaces.Fields{})
 	return router
 }
@@ -225,6 +244,11 @@ func registerAllRoutes(api *gin.RouterGroup, appLogger logger.Logger) {
 	appLogger.Info(ctx, "Registering health domain routes", interfaces.Fields{})
 	health.RegisterRoutes(api)
 	appLogger.Info(ctx, "Health domain routes registered successfully", interfaces.Fields{})
+
+	// ===== PRODUCT REGISTRATION DOMAIN =====
+	appLogger.Info(ctx, "Registering product registration domain routes", interfaces.Fields{})
+	productregistration.RegisterRoutes(api)
+	appLogger.Info(ctx, "Product registration domain routes registered successfully", interfaces.Fields{})
 
 	appLogger.Info(ctx, "All domain routes registered successfully", interfaces.Fields{})
 }
