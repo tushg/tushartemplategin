@@ -26,20 +26,97 @@
 
 ## 🎯 **System Overview**
 
+### **What is Timestamp-Based Logging?**
+
+Timestamp-based logging is an advanced logging strategy that automatically generates log files with timestamps embedded in their filenames. Unlike traditional logging where you specify a fixed filename, this system creates files with names like `app_2025-01-19_14-30-25.log`, where the timestamp represents when the application started.
+
+### **Why Timestamp-Based Logging?**
+
+**Traditional Approach Problems:**
+- Fixed filenames make it hard to identify when logs were created
+- Multiple application instances can overwrite each other's logs
+- Difficult to correlate logs with specific application runs
+- No clear chronological organization
+
+**Timestamp-Based Benefits:**
+- **Clear Chronology**: Instantly know when the application started
+- **Instance Isolation**: Each application run gets its own log files
+- **Easy Correlation**: Match logs with specific deployments or runs
+- **Better Organization**: Natural chronological sorting of log files
+- **Debugging Aid**: Quickly identify logs from specific time periods
+
 ### **Core Principles**
-- **Timestamp-Based Naming**: Files named with startup timestamp (YYYY-MM-DD_HH-MM-SS)
-- **Automatic Directory Creation**: Creates log directories if they don't exist
-- **Production-Ready Rotation**: Lumberjack-based log rotation and compression
-- **Backward Compatibility**: Maintains existing configuration structure
-- **High Performance**: Uber Zap for structured logging with minimal overhead
+
+#### **1. Timestamp-Based Naming**
+The system generates filenames using the pattern `{prefix}_{YYYY-MM-DD_HH-MM-SS}.log`. The timestamp is captured **once** when the logger is initialized, not on each log entry. This ensures all log files from a single application run share the same base timestamp.
+
+**Example**: If your application starts at 2:30:25 PM on January 19, 2025, all log files will be named:
+- `app_2025-01-19_14-30-25.log` (current file)
+- `app_2025-01-19_14-30-25.log.1.gz` (first rotation)
+- `app_2025-01-19_14-30-25.log.2.gz` (second rotation)
+
+#### **2. Automatic Directory Creation**
+The system automatically creates log directories if they don't exist, eliminating the need for manual directory setup. This includes:
+- Creating parent directories recursively
+- Setting appropriate permissions (755 for directories)
+- Validating directory paths
+- Graceful error handling if directory creation fails
+
+#### **3. Production-Ready Rotation**
+Built on Lumberjack, a battle-tested Go library for log rotation, providing:
+- **Size-based rotation**: Files rotate when they reach a specified size
+- **Automatic compression**: Old files are compressed to save disk space
+- **Configurable retention**: Control how many backup files to keep
+- **Age-based cleanup**: Optional deletion of files older than specified days
+- **Thread-safe operations**: Safe for concurrent logging
+
+#### **4. Backward Compatibility**
+The system maintains full compatibility with existing configurations:
+- Uses the same `filePath` configuration field
+- No breaking changes to existing code
+- Gradual migration path from legacy logging
+- Same configuration file formats (YAML/JSON)
+
+#### **5. High Performance**
+Leverages Uber Zap, one of the fastest Go logging libraries:
+- **Structured logging**: JSON and console formats
+- **Minimal allocation**: Optimized for performance
+- **Concurrent safe**: Multiple goroutines can log simultaneously
+- **Configurable levels**: Debug, Info, Warn, Error, Fatal
 
 ### **Key Features**
-- ✅ **Constant Prefix**: Uses hardcoded "app" prefix for all log files
-- ✅ **Automatic File Creation**: Creates timestamp-based files on logger initialization
-- ✅ **Directory Management**: Automatically creates and manages log directories
-- ✅ **Log Rotation**: Size-based rotation with configurable limits
-- ✅ **Compression**: Automatic compression of rotated files
-- ✅ **Error Handling**: Graceful fallback and error reporting
+
+#### **✅ Constant Prefix**
+All log files use a hardcoded "app" prefix, ensuring consistency across the application. This prefix is defined as a constant in the code, making it easy to identify application logs and maintain consistency.
+
+#### **✅ Automatic File Creation**
+Log files are created automatically when the logger is initialized. No manual file creation or management is required. The system handles:
+- Generating timestamp-based filenames
+- Creating the log directory if needed
+- Initializing the log file with proper permissions
+- Setting up rotation parameters
+
+#### **✅ Directory Management**
+The system provides comprehensive directory management:
+- **Automatic Creation**: Creates directories if they don't exist
+- **Permission Setting**: Sets appropriate permissions (755 for directories, 644 for files)
+- **Path Validation**: Validates directory paths and handles errors gracefully
+- **Cross-Platform**: Works on Windows, Linux, and macOS
+
+#### **✅ Log Rotation**
+Advanced log rotation capabilities:
+- **Size-based rotation**: Files rotate when they reach the configured size limit
+- **Backup management**: Keeps a configurable number of backup files
+- **Age-based cleanup**: Optional deletion of files older than specified days
+- **Compression**: Automatic compression of rotated files to save space
+- **Atomic operations**: Safe rotation without data loss
+
+#### **✅ Error Handling**
+Robust error handling throughout the system:
+- **Graceful fallback**: Falls back to stdout if file operations fail
+- **Detailed error messages**: Clear error reporting for troubleshooting
+- **Validation**: Validates configuration parameters before use
+- **Recovery**: Automatic recovery from temporary failures
 
 ---
 
@@ -257,7 +334,13 @@ sequenceDiagram
 
 ## ⚙️ **Configuration Management**
 
+### **Configuration Overview**
+
+The logging system uses a comprehensive configuration structure that allows fine-tuning of all aspects of the logging behavior. The configuration is loaded from YAML or JSON files and supports both development and production environments with different settings.
+
 ### **Configuration Structure**
+
+The logging configuration is part of the main application configuration and includes the following parameters:
 
 ```yaml
 # config.yaml
@@ -274,7 +357,183 @@ log:
   addStack: false       # Whether to add stack traces
 ```
 
+### **Configuration Parameters Explained**
+
+#### **Log Level (`level`)**
+Controls which log messages are written. The levels are hierarchical, meaning setting a level includes all higher levels.
+
+**Available Levels:**
+- **`debug`**: Most verbose level, includes all messages
+- **`info`**: General information messages (default for production)
+- **`warn`**: Warning messages that don't stop execution
+- **`error`**: Error messages that indicate problems
+- **`fatal`**: Fatal errors that cause the application to exit
+
+**Example Usage:**
+```yaml
+level: "info"  # Will log info, warn, error, and fatal messages
+level: "debug" # Will log all messages including debug
+level: "error" # Will only log error and fatal messages
+```
+
+#### **Log Format (`format`)**
+Determines the output format of log messages.
+
+**Available Formats:**
+- **`json`**: Structured JSON format, ideal for log aggregation systems
+- **`console`**: Human-readable format, ideal for development
+
+**JSON Format Example:**
+```json
+{
+  "level": "info",
+  "ts": "2025-01-19T14:30:25.123Z",
+  "caller": "main.go:45",
+  "msg": "Application started",
+  "version": "1.0.0"
+}
+```
+
+**Console Format Example:**
+```
+2025-01-19T14:30:25.123Z	INFO	main.go:45	Application started	{"version": "1.0.0"}
+```
+
+#### **Output Destination (`output`)**
+Controls where log messages are written.
+
+**Available Options:**
+- **`stdout`**: Write to standard output (console)
+- **`file`**: Write to timestamp-based log files
+
+**Use Cases:**
+- **Development**: Use `stdout` for immediate feedback
+- **Production**: Use `file` for persistent logging
+- **Docker**: Use `stdout` for container log collection
+- **Kubernetes**: Use `stdout` for pod log collection
+
+#### **File Path (`filePath`)**
+**NEW BEHAVIOR**: This parameter now specifies the **directory** where timestamp-based log files will be created, not a specific file path.
+
+**Examples:**
+```yaml
+filePath: "./logs"           # Relative path (creates ./logs/ directory)
+filePath: "/var/log/app"     # Absolute path (creates /var/log/app/ directory)
+filePath: "logs"             # Simple directory name (creates logs/ directory)
+```
+
+**What Happens:**
+1. System checks if directory exists
+2. Creates directory if it doesn't exist (with 755 permissions)
+3. Generates timestamp-based filename within that directory
+4. Creates log file with generated filename
+
+#### **Maximum File Size (`maxSize`)**
+Controls when log files are rotated based on size.
+
+**Unit**: Megabytes (MB)
+**Default**: 100 MB
+**Range**: Any positive integer
+
+**Examples:**
+```yaml
+maxSize: 10    # Rotate when file reaches 10 MB
+maxSize: 100   # Rotate when file reaches 100 MB (default)
+maxSize: 500   # Rotate when file reaches 500 MB
+```
+
+**Considerations:**
+- **Smaller files**: More frequent rotations, easier to handle
+- **Larger files**: Fewer rotations, better performance
+- **Production**: 100-200 MB is typically optimal
+- **Development**: 10-50 MB for easier debugging
+
+#### **Maximum Backups (`maxBackup`)**
+Controls how many rotated log files to keep.
+
+**Default**: 3
+**Range**: 0 (unlimited) to any positive integer
+
+**Examples:**
+```yaml
+maxBackup: 0   # Keep all backup files (unlimited)
+maxBackup: 3   # Keep 3 backup files (default)
+maxBackup: 10  # Keep 10 backup files
+```
+
+**Storage Impact:**
+- **maxBackup: 3** with **maxSize: 100** = ~400 MB maximum storage
+- **maxBackup: 10** with **maxSize: 100** = ~1.1 GB maximum storage
+
+#### **Maximum Age (`maxAge`)**
+Controls how long to keep log files based on age.
+
+**Unit**: Days
+**Default**: 0 (disabled)
+**Range**: 0 (disabled) to any positive integer
+
+**Examples:**
+```yaml
+maxAge: 0    # No age limit (keep files indefinitely)
+maxAge: 7    # Delete files older than 7 days
+maxAge: 30   # Delete files older than 30 days
+```
+
+**Use Cases:**
+- **Development**: 1-3 days for quick cleanup
+- **Production**: 7-30 days for analysis
+- **Compliance**: 90+ days for regulatory requirements
+- **Debugging**: 0 (disabled) for long-term retention
+
+#### **Compression (`compress`)**
+Controls whether rotated log files are compressed.
+
+**Default**: true
+**Options**: true, false
+
+**Benefits of Compression:**
+- **Space Savings**: Typically 70-80% reduction in file size
+- **Faster Transfers**: Smaller files for backup and transfer
+- **Cost Reduction**: Lower storage costs
+
+**Trade-offs:**
+- **CPU Usage**: Slight increase in CPU usage during rotation
+- **Access Time**: Requires decompression to read old logs
+
+#### **Caller Information (`addCaller`)**
+Controls whether to include caller information in log messages.
+
+**Default**: true
+**Options**: true, false
+
+**What It Adds:**
+- **File Name**: Source file where log was called
+- **Line Number**: Line number where log was called
+- **Function Name**: Function where log was called
+
+**Example:**
+```json
+{
+  "level": "info",
+  "caller": "main.go:45",  // Added by addCaller: true
+  "msg": "Application started"
+}
+```
+
+#### **Stack Traces (`addStack`)**
+Controls whether to include stack traces in error logs.
+
+**Default**: false
+**Options**: true, false
+
+**When to Enable:**
+- **Development**: true for detailed debugging
+- **Production**: false for performance
+- **Error Analysis**: true for complex error investigation
+
 ### **Configuration Constants**
+
+The system uses several constants that are defined in the code and cannot be changed through configuration:
 
 ```go
 // Constants for log file naming
@@ -285,20 +544,118 @@ const (
 )
 ```
 
+**Why Constants:**
+- **Consistency**: Ensures all log files follow the same naming pattern
+- **Simplicity**: No need to configure basic naming rules
+- **Maintainability**: Easy to change naming convention in one place
+- **Performance**: No runtime configuration lookup for basic settings
+
+### **Configuration Loading Process**
+
+1. **File Detection**: System looks for `config.yaml` or `config.json`
+2. **Parsing**: Configuration is parsed using Viper library
+3. **Validation**: Parameters are validated for correctness
+4. **Defaults**: Missing parameters are filled with default values
+5. **Logger Creation**: Logger is created with validated configuration
+
+### **Environment-Specific Configurations**
+
+#### **Development Environment**
+```yaml
+log:
+  level: "debug"      # Verbose logging
+  format: "console"   # Human-readable format
+  output: "stdout"    # Console output
+  filePath: "./logs"  # Local directory
+  maxSize: 10         # Small files for easy handling
+  maxBackup: 2        # Few backups
+  maxAge: 1           # Quick cleanup
+  compress: false     # No compression for easy reading
+  addCaller: true     # Include caller info
+  addStack: true      # Include stack traces
+```
+
+#### **Production Environment**
+```yaml
+log:
+  level: "info"       # Standard logging
+  format: "json"      # Structured format
+  output: "file"      # File output
+  filePath: "/var/log/app"  # System directory
+  maxSize: 100        # Standard file size
+  maxBackup: 5        # More backups
+  maxAge: 30          # Longer retention
+  compress: true      # Compress for space
+  addCaller: true     # Include caller info
+  addStack: false     # No stack traces for performance
+```
+
+#### **High-Traffic Environment**
+```yaml
+log:
+  level: "warn"       # Minimal logging
+  format: "json"      # Structured format
+  output: "file"      # File output
+  filePath: "/var/log/app"  # System directory
+  maxSize: 500        # Large files
+  maxBackup: 10       # Many backups
+  maxAge: 7           # Short retention
+  compress: true      # Compress for space
+  addCaller: false    # No caller info for performance
+  addStack: false     # No stack traces for performance
+```
+
 ---
 
 ## 📁 **File Naming Strategy**
 
-### **Naming Convention**
+### **Naming Convention Overview**
+
+The timestamp-based file naming strategy creates log files with embedded timestamps that represent when the application started. This approach provides several advantages over traditional fixed-filename logging:
+
+**Benefits:**
+- **Chronological Organization**: Files are naturally sorted by creation time
+- **Instance Isolation**: Each application run gets unique log files
+- **Easy Correlation**: Match logs with specific deployments or runs
+- **Debugging Aid**: Quickly identify logs from specific time periods
+- **No Conflicts**: Multiple instances can run without overwriting logs
+
+### **Naming Pattern**
 
 **Pattern**: `{prefix}_{YYYY-MM-DD_HH-MM-SS}.log`
 
+**Components:**
+- **`{prefix}`**: Constant prefix (hardcoded as "app")
+- **`{YYYY-MM-DD_HH-MM-SS}`**: Timestamp when logger was initialized
+- **`.log`**: File extension
+
 **Examples**:
-- `app_2025-01-19_14-30-25.log`
-- `app_2025-01-19_09-15-30.log`
-- `app_2025-01-20_16-45-12.log`
+- `app_2025-01-19_14-30-25.log` (Started at 2:30:25 PM on Jan 19, 2025)
+- `app_2025-01-19_09-15-30.log` (Started at 9:15:30 AM on Jan 19, 2025)
+- `app_2025-01-20_16-45-12.log` (Started at 4:45:12 PM on Jan 20, 2025)
+
+### **Timestamp Format Details**
+
+The timestamp uses Go's time format specification: `2006-01-02_15-04-05`
+
+**Format Breakdown:**
+- **`2006`**: Year (4 digits)
+- **`01`**: Month (2 digits, zero-padded)
+- **`02`**: Day (2 digits, zero-padded)
+- **`_`**: Separator between date and time
+- **`15`**: Hour (24-hour format, 2 digits, zero-padded)
+- **`04`**: Minute (2 digits, zero-padded)
+- **`05`**: Second (2 digits, zero-padded)
+
+**Why This Format:**
+- **Sortable**: Files sort chronologically by name
+- **Readable**: Easy to understand at a glance
+- **Unique**: Precise to the second, avoiding conflicts
+- **Cross-Platform**: Works on all operating systems
 
 ### **File Generation Logic**
+
+The file naming is handled by the `generateTimestampBasedFileName` function:
 
 ```go
 func generateTimestampBasedFileName(logDirectory string) string {
@@ -308,15 +665,141 @@ func generateTimestampBasedFileName(logDirectory string) string {
 }
 ```
 
+**Process:**
+1. **Get Current Time**: `time.Now()` gets the current timestamp
+2. **Format Timestamp**: Convert to string using `TimestampFormat`
+3. **Build Filename**: Combine prefix, timestamp, and extension
+4. **Join Path**: Combine with directory path using `filepath.Join`
+
+**Example Execution:**
+```go
+// If called at 2025-01-19 14:30:25
+timestamp := "2025-01-19_14-30-25"
+fileName := "app_2025-01-19_14-30-25.log"
+fullPath := "./logs/app_2025-01-19_14-30-25.log"
+```
+
+### **When Timestamps Are Generated**
+
+**Important**: The timestamp is generated **once** when the logger is initialized, not on each log entry. This ensures:
+
+- **Consistency**: All log files from one application run share the same timestamp
+- **Organization**: Related logs are grouped together
+- **Performance**: No timestamp generation overhead on each log entry
+
+**Timeline Example:**
+```
+9:00:00 AM  - Application starts, logger initialized
+            - Timestamp generated: "2025-01-19_09-00-00"
+            - File created: app_2025-01-19_09-00-00.log
+
+9:00:01 AM  - First log entry written
+            - Written to: app_2025-01-19_09-00-00.log
+
+10:00:00 AM - File rotation occurs (100 MB reached)
+            - Current file renamed to: app_2025-01-19_09-00-00.log.1.gz
+            - New file created: app_2025-01-19_09-00-00.log
+
+11:00:00 AM - Another log entry written
+            - Written to: app_2025-01-19_09-00-00.log (same base name)
+```
+
 ### **Directory Structure**
 
+The system creates a hierarchical directory structure for organized log management:
+
 ```
-./logs/
+./logs/                                    # Log directory (configurable)
 ├── app_2025-01-19_14-30-25.log          # Current active file
 ├── app_2025-01-19_14-30-25.log.1.gz     # 1st rotation (compressed)
 ├── app_2025-01-19_14-30-25.log.2.gz     # 2nd rotation (compressed)
 └── app_2025-01-19_14-30-25.log.3.gz     # 3rd rotation (compressed)
 ```
+
+**File Types:**
+- **`.log`**: Current active file (uncompressed)
+- **`.log.N.gz`**: Rotated files (compressed)
+- **`.log.N`**: Rotated files (uncompressed, if compression disabled)
+
+### **File Naming During Rotation**
+
+When log files are rotated, the naming follows a specific pattern:
+
+**Before Rotation:**
+```
+app_2025-01-19_14-30-25.log (100 MB)     # Current file
+```
+
+**After Rotation:**
+```
+app_2025-01-19_14-30-25.log (0 MB)       # New current file
+app_2025-01-19_14-30-25.log.1.gz (100 MB) # Previous file compressed
+```
+
+**Multiple Rotations:**
+```
+app_2025-01-19_14-30-25.log (0 MB)       # Current file
+app_2025-01-19_14-30-25.log.1.gz (100 MB) # Most recent rotation
+app_2025-01-19_14-30-25.log.2.gz (100 MB) # Second most recent
+app_2025-01-19_14-30-25.log.3.gz (100 MB) # Third most recent
+```
+
+### **Cross-Platform Compatibility**
+
+The file naming strategy is designed to work across all platforms:
+
+**Windows:**
+- Uses backslashes in paths: `logs\app_2025-01-19_14-30-25.log`
+- Handles Windows-specific path separators
+- Compatible with Windows file naming conventions
+
+**Linux/macOS:**
+- Uses forward slashes in paths: `logs/app_2025-01-19_14-30-25.log`
+- Follows Unix file naming conventions
+- Supports symbolic links and permissions
+
+**Docker/Containers:**
+- Works within container filesystems
+- Compatible with volume mounts
+- Supports log collection systems
+
+### **File Naming Best Practices**
+
+**Do:**
+- Use descriptive directory names: `./logs`, `/var/log/app`
+- Keep timestamps in filename for easy identification
+- Use consistent naming patterns across environments
+- Consider timezone implications for distributed systems
+
+**Don't:**
+- Use spaces or special characters in filenames
+- Change naming pattern after deployment
+- Use relative paths in production (use absolute paths)
+- Forget about timezone consistency in distributed systems
+
+### **Integration with Log Collection Systems**
+
+The timestamp-based naming works well with various log collection systems:
+
+**ELK Stack (Elasticsearch, Logstash, Kibana):**
+- Files can be easily identified by timestamp
+- Logstash can parse timestamps from filenames
+- Kibana can create time-based visualizations
+
+**Fluentd:**
+- Can use filename patterns for log routing
+- Timestamps help with log ordering
+- Easy to configure file monitoring
+
+**Splunk:**
+- Can index files based on timestamp patterns
+- Supports time-based log analysis
+- Easy correlation with application events
+
+**Custom Scripts:**
+- Simple to parse timestamps from filenames
+- Easy to implement log rotation policies
+- Straightforward backup and archival strategies
 
 ---
 
