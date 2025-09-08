@@ -14,6 +14,17 @@ type Config struct {
 	AddStack   bool   // Whether to add stack traces
 }
 
+// Constants for log file naming
+const (
+	// LogFilePrefix is the constant prefix used for all log files
+	LogFilePrefix = "app"
+	// LogFileExtension is the file extension for log files
+	LogFileExtension = ".log"
+	// TimestampFormat is the format used for timestamp in log file names
+	// Format: YYYY-MM-DD_HH-MM-SS
+	TimestampFormat = "2006-01-02_15-04-05"
+)
+
 // Level represents the logging level
 type Level int
 

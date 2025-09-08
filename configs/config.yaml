@@ -6,10 +6,10 @@ log:
   level: "info"
   format: "json"
   output: "stdout"
-  filePath: ""
+  filePath: "./logs"
   maxSize: 100
   maxBackup: 3
-  maxAge: 28
+  maxAge: 0        # Disabled - no age-based deletion
   compress: true
   addCaller: true
   addStack: false

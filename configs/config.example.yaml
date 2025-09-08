@@ -9,7 +9,7 @@ log:
   level: "info"      # debug, info, warn, error, fatal
   format: "json"     # json, console
   output: "stdout"   # stdout, file
-  filePath: ""       # Log file path (if output is file)
+  filePath: "./logs" # Log directory path (if output is file) - Now used for timestamp-based files
   maxSize: 100       # Maximum log file size in MB
   maxBackup: 3       # Maximum number of backup files
   maxAge: 28         # Maximum age of log files in days

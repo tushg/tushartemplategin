@@ -2,8 +2,11 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -23,6 +26,44 @@ type Logger interface {
 // logger implements the Logger interface using zap
 type logger struct {
 	zapLogger *zap.Logger // Underlying zap logger instance
+}
+
+// generateTimestampBasedFileName creates a timestamp-based log file name
+// Format: {prefix}_{YYYY-MM-DD_HH-MM-SS}.log
+func generateTimestampBasedFileName(logDirectory string) string {
+	timestamp := time.Now().Format(TimestampFormat)
+	fileName := fmt.Sprintf("%s_%s%s", LogFilePrefix, timestamp, LogFileExtension)
+	return filepath.Join(logDirectory, fileName)
+}
+
+// ensureLogDirectory creates the log directory if it doesn't exist
+func ensureLogDirectory(logDirectory string) error {
+	if logDirectory == "" {
+		return fmt.Errorf("log directory cannot be empty")
+	}
+
+	// Create directory with appropriate permissions (755)
+	if err := os.MkdirAll(logDirectory, 0755); err != nil {
+		return fmt.Errorf("failed to create log directory '%s': %w", logDirectory, err)
+	}
+
+	return nil
+}
+
+// getLogFilePath determines the log file path based on configuration
+// Uses filePath as directory and generates timestamp-based filename
+func getLogFilePath(config *Config) (string, error) {
+	if config.FilePath == "" {
+		return "", fmt.Errorf("filePath must be specified for file output")
+	}
+
+	// Ensure directory exists
+	if err := ensureLogDirectory(config.FilePath); err != nil {
+		return "", err
+	}
+
+	// Generate timestamp-based file name
+	return generateTimestampBasedFileName(config.FilePath), nil
 }
 
 // NewLogger creates a new logger instance with the given configuration
@@ -46,10 +87,16 @@ func NewLogger(config *Config) (Logger, error) {
 
 	// Determine output destination (file or stdout)
 	var output io.Writer
-	if config.Output == "file" && config.FilePath != "" {
+	if config.Output == "file" {
+		// Get timestamp-based log file path
+		logFilePath, err := getLogFilePath(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to determine log file path: %w", err)
+		}
+
 		// Use lumberjack for log rotation and file management
 		output = &lumberjack.Logger{
-			Filename:   config.FilePath,   // Log file path
+			Filename:   logFilePath,       // Timestamp-based log file path
 			MaxSize:    config.MaxSize,    // Max file size in MB
 			MaxBackups: config.MaxBackups, // Max number of backup files
 			MaxAge:     config.MaxAge,     // Max age of log files in days

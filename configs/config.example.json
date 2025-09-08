@@ -14,7 +14,7 @@
     "level": "info",
     "format": "json",
     "output": "stdout",
-    "filePath": "",
+    "filePath": "./logs",
     "maxSize": 100,
     "maxBackup": 3,
     "maxAge": 28,
