@@ -128,7 +128,10 @@ func NewLogger(config *Config) (Logger, error) {
 
 	// Add caller information if enabled
 	if config.AddCaller {
-		options = append(options, zap.AddCaller())
+		options = append(options,
+			zap.AddCaller(),      // Enable caller info
+			zap.AddCallerSkip(1), // Skip 1 level to get actual caller
+		)
 	}
 
 	// Add stack traces if enabled (for error level and above)
