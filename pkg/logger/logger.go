@@ -28,6 +28,13 @@ type logger struct {
 	zapLogger *zap.Logger // Underlying zap logger instance
 }
 
+// customTimeEncoder creates timestamps in YYYY-MM-DDTHH:MM:SS.ssssssZ format
+func customTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	// Format: YYYY-MM-DDTHH:MM:SS.ssssssZ
+	// Example: 2024-01-15T10:30:45.123456Z
+	enc.AppendString(t.UTC().Format("2006-01-02T15:04:05.000000Z"))
+}
+
 // generateTimestampBasedFileName creates a timestamp-based log file name
 // Format: {prefix}_{YYYY-MM-DD_HH-MM-SS}.log
 func generateTimestampBasedFileName(logDirectory string) string {
@@ -109,7 +116,7 @@ func NewLogger(config *Config) (Logger, error) {
 	// Configure encoder settings for structured logging
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.TimeKey = "timestamp"                     // Key for timestamp field
-	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder   // ISO8601 time format
+	encoderConfig.EncodeTime = customTimeEncoder            // Custom time format: YYYY-MM-DDTHH:MM:SS.ssssssZ
 	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder // Capital level names
 
 	// Choose encoder based on format (JSON or console)
