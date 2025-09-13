@@ -151,32 +151,74 @@ func NewLogger(config *Config) (Logger, error) {
 	return &logger{zapLogger: zapLogger}, nil
 }
 
-// Debug logs a debug message with optional fields
+// Debug logs a debug message with optional fields (enhanced with correlation ID)
 func (l *logger) Debug(ctx context.Context, msg string, fields interfaces.Fields) {
-	l.zapLogger.Debug(msg, convertFields(fields)...)
+	enhancedFields := enhanceFieldsWithCorrelationID(ctx, fields)
+	l.zapLogger.Debug(msg, convertFields(enhancedFields)...)
 }
 
-// Info logs an info message with optional fields
+// Info logs an info message with optional fields (enhanced with correlation ID)
 func (l *logger) Info(ctx context.Context, msg string, fields interfaces.Fields) {
-	l.zapLogger.Info(msg, convertFields(fields)...)
+	enhancedFields := enhanceFieldsWithCorrelationID(ctx, fields)
+	l.zapLogger.Info(msg, convertFields(enhancedFields)...)
 }
 
-// Warn logs a warning message with optional fields
+// Warn logs a warning message with optional fields (enhanced with correlation ID)
 func (l *logger) Warn(ctx context.Context, msg string, fields interfaces.Fields) {
-	l.zapLogger.Warn(msg, convertFields(fields)...)
+	enhancedFields := enhanceFieldsWithCorrelationID(ctx, fields)
+	l.zapLogger.Warn(msg, convertFields(enhancedFields)...)
 }
 
-// Error logs an error message with optional fields
+// Error logs an error message with optional fields (enhanced with correlation ID)
 func (l *logger) Error(ctx context.Context, msg string, fields interfaces.Fields) {
-	l.zapLogger.Error(msg, convertFields(fields)...)
+	enhancedFields := enhanceFieldsWithCorrelationID(ctx, fields)
+	l.zapLogger.Error(msg, convertFields(enhancedFields)...)
 }
 
-// Fatal logs a fatal message and exits the program
+// Fatal logs a fatal message and exits the program (enhanced with correlation ID)
 func (l *logger) Fatal(ctx context.Context, msg string, err error, fields interfaces.Fields) {
 	if err != nil {
 		fields["error"] = err.Error() // Add error message to fields
 	}
-	l.zapLogger.Fatal(msg, convertFields(fields)...)
+	enhancedFields := enhanceFieldsWithCorrelationID(ctx, fields)
+	l.zapLogger.Fatal(msg, convertFields(enhancedFields)...)
+}
+
+// getCorrelationIDFromContext extracts correlation ID from context
+func getCorrelationIDFromContext(ctx context.Context) string {
+	if correlationID, ok := ctx.Value("correlation_id").(string); ok {
+		return correlationID
+	}
+	return ""
+}
+
+// getTraceIDFromContext extracts trace ID from context
+func getTraceIDFromContext(ctx context.Context) string {
+	if traceID, ok := ctx.Value("trace_id").(string); ok {
+		return traceID
+	}
+	return ""
+}
+
+// enhanceFieldsWithCorrelationID adds correlation ID and trace ID to log fields
+func enhanceFieldsWithCorrelationID(ctx context.Context, fields interfaces.Fields) interfaces.Fields {
+	// Create a copy of fields to avoid modifying the original
+	enhancedFields := make(interfaces.Fields)
+	for k, v := range fields {
+		enhancedFields[k] = v
+	}
+
+	// Add correlation ID if present
+	if correlationID := getCorrelationIDFromContext(ctx); correlationID != "" {
+		enhancedFields["correlation_id"] = correlationID
+	}
+
+	// Add trace ID if present
+	if traceID := getTraceIDFromContext(ctx); traceID != "" {
+		enhancedFields["trace_id"] = traceID
+	}
+
+	return enhancedFields
 }
 
 // convertFields converts our Fields type to zap.Field slice

@@ -195,6 +195,11 @@ func main() {
 func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger, db interfaces.Database) *gin.Engine {
 	ctx := context.Background()
 
+	// ===== CORRELATION ID MIDDLEWARE =====
+	appLogger.Info(ctx, "Setting up correlation ID middleware", interfaces.Fields{})
+	router.Use(middleware.CorrelationIDMiddleware())
+	appLogger.Info(ctx, "Correlation ID middleware setup complete", interfaces.Fields{})
+
 	// ===== SECURITY MIDDLEWARE =====
 	appLogger.Info(ctx, "Setting up security middleware", interfaces.Fields{})
 	router.Use(middleware.SecurityHeaders())
