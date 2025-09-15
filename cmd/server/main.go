@@ -20,6 +20,7 @@ import (
 	// External packages for configuration, logging, and server
 	"tushartemplategin/pkg/config"
 	"tushartemplategin/pkg/database"
+	"tushartemplategin/pkg/errors"
 	"tushartemplategin/pkg/interfaces"
 	"tushartemplategin/pkg/logger"
 	"tushartemplategin/pkg/middleware"
@@ -93,6 +94,9 @@ func main() {
 	// Step 6: Create a new Gin router instance
 	router := gin.New()
 	router.SetTrustedProxies(nil)
+
+	// Add error handling middleware
+	router.Use(errors.ErrorHandlerMiddleware())
 
 	// ===== DOMAIN SETUP =====
 	// Step 7: Setup domains and middleware
