@@ -1,0 +1,31 @@
+sequenceDiagram
+    participant C as Client
+    participant R as Router
+    participant EH as Error Handler
+    participant V as Validation
+    participant S as Service
+    participant Repo as Repository
+    participant DB as Database
+
+    C->>R: HTTP Request
+    R->>EH: Process Request
+    EH->>V: Validate Request
+    V-->>EH: Validation Error
+    EH->>EH: Convert to AppError
+    EH->>EH: Log Error
+    EH-->>C: HTTP 422 + Error JSON
+
+    Note over C,DB: Alternative: Database Error
+    C->>R: HTTP Request
+    R->>EH: Process Request
+    EH->>V: Validate Request
+    V->>S: Call Service
+    S->>Repo: Call Repository
+    Repo->>DB: Execute Query
+    DB-->>Repo: Database Error
+    Repo->>Repo: Wrap as DatabaseError
+    Repo-->>S: Return AppError
+    S-->>R: Return AppError
+    R->>EH: Handle Error
+    EH->>EH: Log Error
+    EH-->>C: HTTP 500 + Error JSON

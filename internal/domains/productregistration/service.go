@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"tushartemplategin/pkg/errors"
 	"tushartemplategin/pkg/interfaces"
 )
 
@@ -36,14 +37,14 @@ func (s *ProductService) CreateProduct(ctx context.Context, req *CreateProductRe
 			"error": err.Error(),
 			"sku":   req.SKU,
 		})
-		return nil, fmt.Errorf("failed to validate SKU: %w", err)
+		return nil, errors.NewDatabaseError("check SKU existence", err)
 	}
 
 	if exists {
 		s.logger.Warn(ctx, "Product creation failed: SKU already exists", interfaces.Fields{
 			"sku": req.SKU,
 		})
-		return nil, fmt.Errorf("product with SKU %s already exists", req.SKU)
+		return nil, errors.NewProductSKUExists(req.SKU)
 	}
 
 	// Create product entity
@@ -64,7 +65,7 @@ func (s *ProductService) CreateProduct(ctx context.Context, req *CreateProductRe
 			"error": err.Error(),
 			"sku":   req.SKU,
 		})
-		return nil, fmt.Errorf("failed to create product: %w", err)
+		return nil, errors.NewDatabaseError("create product", err)
 	}
 
 	s.logger.Info(ctx, "Product created successfully", interfaces.Fields{
@@ -87,7 +88,14 @@ func (s *ProductService) GetProduct(ctx context.Context, id int64) (*ProductRegi
 			"error": err.Error(),
 			"id":    id,
 		})
-		return nil, err
+		return nil, errors.NewDatabaseError("get product by ID", err)
+	}
+
+	if product == nil {
+		s.logger.Warn(ctx, "Product not found", interfaces.Fields{
+			"id": id,
+		})
+		return nil, errors.NewProductNotFound(id)
 	}
 
 	s.logger.Info(ctx, "Product retrieved successfully", interfaces.Fields{

@@ -1,0 +1,46 @@
+classDiagram
+    class ErrorCode {
+        <<enumeration>>
+        +INTERNAL_SERVER_ERROR
+        +BAD_REQUEST
+        +NOT_FOUND
+        +VALIDATION_FAILED
+        +PRODUCT_NOT_FOUND
+        +DATABASE_ERROR
+    }
+
+    class AppError {
+        -Code: ErrorCode
+        -Message: string
+        -Details: string
+        -HTTPStatus: int
+        -Fields: map[string]interface{}
+        -Err: error
+        +Error() string
+        +Unwrap() error
+        +ToJSON() []byte
+        +WithField(key, value) AppError
+        +WithFields(fields) AppError
+        +WithDetails(details) AppError
+    }
+
+    class ErrorConstructors {
+        +New(code, message, httpStatus) AppError
+        +NewWithDetails(code, message, details, httpStatus) AppError
+        +NewWithError(code, message, httpStatus, err) AppError
+        +NewBadRequest(message) AppError
+        +NewNotFound(message) AppError
+        +NewInternalServerError(message) AppError
+        +NewProductNotFound(id) AppError
+        +NewDatabaseError(operation, err) AppError
+    }
+
+    class ErrorHelpers {
+        +IsAppError(err) bool
+        +GetAppError(err) *AppError
+        +WrapError(err, code, message, httpStatus) AppError
+    }
+
+    AppError --> ErrorCode
+    ErrorConstructors --> AppError
+    ErrorHelpers --> AppError

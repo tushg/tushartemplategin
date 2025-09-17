@@ -94,6 +94,10 @@ func main() {
 	router := gin.New()
 	router.SetTrustedProxies(nil)
 
+	// Set up 404 and 405 handlers
+	router.NoRoute(middleware.NotFoundHandler(appLogger))
+	router.NoMethod(middleware.MethodNotAllowedHandler(appLogger))
+
 	// ===== DOMAIN SETUP =====
 	// Step 7: Setup domains and middleware
 	router = setupDomainsAndMiddleware(router, appLogger, db)
@@ -195,6 +199,11 @@ func main() {
 func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger, db interfaces.Database) *gin.Engine {
 	ctx := context.Background()
 
+	// ===== ERROR HANDLING MIDDLEWARE =====
+	appLogger.Info(ctx, "Setting up error handling middleware", interfaces.Fields{})
+	router.Use(middleware.ErrorHandlerMiddleware(appLogger))
+	appLogger.Info(ctx, "Error handling middleware setup complete", interfaces.Fields{})
+
 	// ===== CORRELATION ID MIDDLEWARE =====
 	appLogger.Info(ctx, "Setting up correlation ID middleware", interfaces.Fields{})
 	router.Use(middleware.CorrelationIDMiddleware())
@@ -204,6 +213,11 @@ func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger, db i
 	appLogger.Info(ctx, "Setting up security middleware", interfaces.Fields{})
 	router.Use(middleware.SecurityHeaders())
 	appLogger.Info(ctx, "Security middleware setup complete", interfaces.Fields{})
+
+	// ===== VALIDATION MIDDLEWARE =====
+	appLogger.Info(ctx, "Setting up validation middleware", interfaces.Fields{})
+	router.Use(middleware.ValidationMiddleware(appLogger))
+	appLogger.Info(ctx, "Validation middleware setup complete", interfaces.Fields{})
 
 	// ===== CURRENT DOMAINS =====
 	appLogger.Info(ctx, "Setting up health domain", interfaces.Fields{})

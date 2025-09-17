@@ -5,7 +5,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"tushartemplategin/pkg/constants"
+	"tushartemplategin/pkg/errors"
+	"tushartemplategin/pkg/middleware"
 )
 
 // RegisterRoutes registers all product registration-related routes to the given router group
@@ -50,20 +51,19 @@ func createProductHandler(c *gin.Context) {
 	// Parse request body
 	var req CreateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   constants.ERROR_400_BAD_REQUEST,
-			"details": err.Error(),
-		})
+		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid request body", err.Error()))
 		return
 	}
 
 	// Create product through service layer
 	product, err := productService.CreateProduct(ctx, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
-			"details": err.Error(),
-		})
+		// Check if it's already an AppError
+		if appErr := errors.GetAppError(err); appErr != nil {
+			middleware.HandleAppError(c, appErr)
+		} else {
+			middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to create product", err))
+		}
 		return
 	}
 
@@ -81,20 +81,18 @@ func listProductsHandler(c *gin.Context) {
 	// Parse query parameters
 	var req ProductListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   constants.ERROR_400_BAD_REQUEST,
-			"details": err.Error(),
-		})
+		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid query parameters", err.Error()))
 		return
 	}
 
 	// List products through service layer
 	response, err := productService.ListProducts(ctx, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
-			"details": err.Error(),
-		})
+		if appErr := errors.GetAppError(err); appErr != nil {
+			middleware.HandleAppError(c, appErr)
+		} else {
+			middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to list products", err))
+		}
 		return
 	}
 
@@ -113,29 +111,23 @@ func getProductHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   constants.ERROR_400_BAD_REQUEST,
-			"details": "Invalid product ID",
-		})
+		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid product ID", "Product ID must be a valid integer"))
 		return
 	}
 
 	// Get product through service layer
 	product, err := productService.GetProduct(ctx, id)
 	if err != nil {
-		// Check if it's a "not found" error
-		if err.Error() == "product with id "+idStr+" not found" {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error":   constants.ERROR_404_NOT_FOUND,
-				"details": err.Error(),
-			})
-			return
+		if appErr := errors.GetAppError(err); appErr != nil {
+			middleware.HandleAppError(c, appErr)
+		} else {
+			// Check if it's a "not found" error by string matching (for backward compatibility)
+			if err.Error() == "product with id "+idStr+" not found" {
+				middleware.HandleAppError(c, errors.NewProductNotFound(id))
+			} else {
+				middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to get product", err))
+			}
 		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
-			"details": err.Error(),
-		})
 		return
 	}
 
@@ -154,39 +146,30 @@ func updateProductHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   constants.ERROR_400_BAD_REQUEST,
-			"details": "Invalid product ID",
-		})
+		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid product ID", "Product ID must be a valid integer"))
 		return
 	}
 
 	// Parse request body
 	var req UpdateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   constants.ERROR_400_BAD_REQUEST,
-			"details": err.Error(),
-		})
+		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid request body", err.Error()))
 		return
 	}
 
 	// Update product through service layer
 	product, err := productService.UpdateProduct(ctx, id, &req)
 	if err != nil {
-		// Check if it's a "not found" error
-		if err.Error() == "product with id "+idStr+" not found" {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error":   constants.ERROR_404_NOT_FOUND,
-				"details": err.Error(),
-			})
-			return
+		if appErr := errors.GetAppError(err); appErr != nil {
+			middleware.HandleAppError(c, appErr)
+		} else {
+			// Check if it's a "not found" error
+			if err.Error() == "product with id "+idStr+" not found" {
+				middleware.HandleAppError(c, errors.NewProductNotFound(id))
+			} else {
+				middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to update product", err))
+			}
 		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
-			"details": err.Error(),
-		})
 		return
 	}
 
@@ -205,29 +188,23 @@ func deleteProductHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   constants.ERROR_400_BAD_REQUEST,
-			"details": "Invalid product ID",
-		})
+		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid product ID", "Product ID must be a valid integer"))
 		return
 	}
 
 	// Delete product through service layer
 	err = productService.DeleteProduct(ctx, id)
 	if err != nil {
-		// Check if it's a "not found" error
-		if err.Error() == "product with id "+idStr+" not found" {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error":   constants.ERROR_404_NOT_FOUND,
-				"details": err.Error(),
-			})
-			return
+		if appErr := errors.GetAppError(err); appErr != nil {
+			middleware.HandleAppError(c, appErr)
+		} else {
+			// Check if it's a "not found" error
+			if err.Error() == "product with id "+idStr+" not found" {
+				middleware.HandleAppError(c, errors.NewProductNotFound(id))
+			} else {
+				middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to delete product", err))
+			}
 		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
-			"details": err.Error(),
-		})
 		return
 	}
 
@@ -245,29 +222,23 @@ func getProductBySKUHandler(c *gin.Context) {
 	// Parse SKU from URL parameter
 	sku := c.Param("sku")
 	if sku == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   constants.ERROR_400_BAD_REQUEST,
-			"details": "SKU parameter is required",
-		})
+		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("SKU parameter is required", "SKU cannot be empty"))
 		return
 	}
 
 	// Get product through service layer
 	product, err := productService.GetProductBySKU(ctx, sku)
 	if err != nil {
-		// Check if it's a "not found" error
-		if err.Error() == "product with sku "+sku+" not found" {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error":   constants.ERROR_404_NOT_FOUND,
-				"details": err.Error(),
-			})
-			return
+		if appErr := errors.GetAppError(err); appErr != nil {
+			middleware.HandleAppError(c, appErr)
+		} else {
+			// Check if it's a "not found" error
+			if err.Error() == "product with sku "+sku+" not found" {
+				middleware.HandleAppError(c, errors.NewNotFoundWithDetails("Product not found", "Product with SKU '"+sku+"' not found").WithField("sku", sku))
+			} else {
+				middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to get product by SKU", err))
+			}
 		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
-			"details": err.Error(),
-		})
 		return
 	}
 
@@ -286,10 +257,7 @@ func updateStockHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   constants.ERROR_400_BAD_REQUEST,
-			"details": "Invalid product ID",
-		})
+		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid product ID", "Product ID must be a valid integer"))
 		return
 	}
 
@@ -298,29 +266,29 @@ func updateStockHandler(c *gin.Context) {
 		Stock int `json:"stock" binding:"required,min=0"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   constants.ERROR_400_BAD_REQUEST,
-			"details": err.Error(),
-		})
+		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid request body", err.Error()))
+		return
+	}
+
+	// Validate stock value
+	if req.Stock < 0 {
+		middleware.HandleAppError(c, errors.NewInvalidStock(req.Stock))
 		return
 	}
 
 	// Update stock through service layer
 	err = productService.UpdateStock(ctx, id, req.Stock)
 	if err != nil {
-		// Check if it's a "not found" error
-		if err.Error() == "product with id "+idStr+" not found" {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error":   constants.ERROR_404_NOT_FOUND,
-				"details": err.Error(),
-			})
-			return
+		if appErr := errors.GetAppError(err); appErr != nil {
+			middleware.HandleAppError(c, appErr)
+		} else {
+			// Check if it's a "not found" error
+			if err.Error() == "product with id "+idStr+" not found" {
+				middleware.HandleAppError(c, errors.NewProductNotFound(id))
+			} else {
+				middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to update stock", err))
+			}
 		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   constants.ERROR_500_INTERNAL_SERVER_ERROR,
-			"details": err.Error(),
-		})
 		return
 	}
 

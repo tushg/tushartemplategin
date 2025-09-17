@@ -1,0 +1,19 @@
+flowchart TD
+    A[Request Received] --> B{Error Handler Middleware}
+    B --> C[Continue to Handler]
+    C --> D{Handler Executes}
+    D -->|Success| E[Return Success Response]
+    D -->|Error| F{Is AppError?}
+    F -->|Yes| G[Log Error with Context]
+    F -->|No| H[Convert to AppError]
+    H --> G
+    G --> I[Send Structured Error Response]
+    
+    C --> J{Panic Occurs?}
+    J -->|Yes| K[Recover from Panic]
+    K --> L[Create Internal Server Error]
+    L --> G
+    
+    B --> M[Set 404/405 Handlers]
+    M --> N[Handle Undefined Routes]
+    N --> G
