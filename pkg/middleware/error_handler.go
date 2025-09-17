@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"net/http"
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,7 @@ func ErrorHandlerMiddleware(logger interfaces.Logger) gin.HandlerFunc {
 				})
 
 				// Create internal server error response
-				appErr := errors.NewInternalServerError("Internal server error occurred")
+				appErr := errors.New(errors.ErrCodeInternalServer, "Internal server error occurred", http.StatusInternalServerError)
 				respondWithError(c, appErr)
 				c.Abort()
 			}
@@ -64,7 +65,7 @@ func convertToAppError(err error) *errors.AppError {
 	}
 
 	// Convert standard error to internal server error
-	return errors.NewInternalServerErrorWithError("An unexpected error occurred", err)
+	return errors.NewWithError(errors.ErrCodeInternalServer, "An unexpected error occurred", http.StatusInternalServerError, err)
 }
 
 // respondWithError sends a structured error response
@@ -90,18 +91,11 @@ func HandleAppError(c *gin.Context, appErr *errors.AppError) {
 	c.Error(appErr)
 }
 
-// ValidationErrorHandler handles validation errors from Gin's binding
-func ValidationErrorHandler(c *gin.Context, err error) {
-	// Convert Gin validation error to our AppError
-	appErr := errors.NewValidationErrorWithDetails("Validation failed", err.Error())
-	HandleAppError(c, appErr)
-}
-
 // NotFoundHandler handles 404 errors for undefined routes
 func NotFoundHandler(logger interfaces.Logger) gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
-		appErr := errors.NewNotFoundWithDetails("Route not found",
-			"The requested route does not exist")
+		appErr := errors.NewWithDetails(errors.ErrCodeNotFound, "Route not found",
+			"The requested route does not exist", http.StatusNotFound)
 
 		logger.Warn(c.Request.Context(), "Route not found", interfaces.Fields{
 			"path":   c.Request.URL.Path,
@@ -115,8 +109,8 @@ func NotFoundHandler(logger interfaces.Logger) gin.HandlerFunc {
 // MethodNotAllowedHandler handles 405 errors for unsupported methods
 func MethodNotAllowedHandler(logger interfaces.Logger) gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
-		appErr := errors.NewBadRequestWithDetails("Method not allowed",
-			"The HTTP method is not supported for this route")
+		appErr := errors.NewWithDetails(errors.ErrCodeBadRequest, "Method not allowed",
+			"The HTTP method is not supported for this route", http.StatusMethodNotAllowed)
 
 		logger.Warn(c.Request.Context(), "Method not allowed", interfaces.Fields{
 			"path":   c.Request.URL.Path,

@@ -3,6 +3,7 @@ package productregistration
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"tushartemplategin/pkg/errors"
 	"tushartemplategin/pkg/interfaces"
@@ -37,14 +38,14 @@ func (s *ProductService) CreateProduct(ctx context.Context, req *CreateProductRe
 			"error": err.Error(),
 			"sku":   req.SKU,
 		})
-		return nil, errors.NewDatabaseError("check SKU existence", err)
+		return nil, errors.NewWithError(errors.ErrCodeDatabaseQuery, "Database operation failed", http.StatusInternalServerError, err).WithField("operation", "check SKU existence")
 	}
 
 	if exists {
 		s.logger.Warn(ctx, "Product creation failed: SKU already exists", interfaces.Fields{
 			"sku": req.SKU,
 		})
-		return nil, errors.NewProductSKUExists(req.SKU)
+		return nil, errors.NewWithDetails(errors.ErrCodeProductSKUExists, "Product SKU already exists", fmt.Sprintf("Product with SKU '%s' already exists", req.SKU), http.StatusConflict).WithField("sku", req.SKU)
 	}
 
 	// Create product entity
@@ -65,7 +66,7 @@ func (s *ProductService) CreateProduct(ctx context.Context, req *CreateProductRe
 			"error": err.Error(),
 			"sku":   req.SKU,
 		})
-		return nil, errors.NewDatabaseError("create product", err)
+		return nil, errors.NewWithError(errors.ErrCodeDatabaseQuery, "Database operation failed", http.StatusInternalServerError, err).WithField("operation", "create product")
 	}
 
 	s.logger.Info(ctx, "Product created successfully", interfaces.Fields{
@@ -88,14 +89,14 @@ func (s *ProductService) GetProduct(ctx context.Context, id int64) (*ProductRegi
 			"error": err.Error(),
 			"id":    id,
 		})
-		return nil, errors.NewDatabaseError("get product by ID", err)
+		return nil, errors.NewWithError(errors.ErrCodeDatabaseQuery, "Database operation failed", http.StatusInternalServerError, err).WithField("operation", "get product by ID")
 	}
 
 	if product == nil {
 		s.logger.Warn(ctx, "Product not found", interfaces.Fields{
 			"id": id,
 		})
-		return nil, errors.NewProductNotFound(id)
+		return nil, errors.NewWithDetails(errors.ErrCodeProductNotFound, "Product not found", fmt.Sprintf("Product with ID %v not found", id), http.StatusNotFound).WithField("product_id", id)
 	}
 
 	s.logger.Info(ctx, "Product retrieved successfully", interfaces.Fields{

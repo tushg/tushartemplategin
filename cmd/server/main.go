@@ -214,11 +214,6 @@ func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger, db i
 	router.Use(middleware.SecurityHeaders())
 	appLogger.Info(ctx, "Security middleware setup complete", interfaces.Fields{})
 
-	// ===== VALIDATION MIDDLEWARE =====
-	appLogger.Info(ctx, "Setting up validation middleware", interfaces.Fields{})
-	router.Use(middleware.ValidationMiddleware(appLogger))
-	appLogger.Info(ctx, "Validation middleware setup complete", interfaces.Fields{})
-
 	// ===== CURRENT DOMAINS =====
 	appLogger.Info(ctx, "Setting up health domain", interfaces.Fields{})
 

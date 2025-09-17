@@ -1,6 +1,7 @@
 package productregistration
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -51,7 +52,7 @@ func createProductHandler(c *gin.Context) {
 	// Parse request body
 	var req CreateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid request body", err.Error()))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeBadRequest, "Invalid request body", err.Error(), http.StatusBadRequest))
 		return
 	}
 
@@ -62,7 +63,7 @@ func createProductHandler(c *gin.Context) {
 		if appErr := errors.GetAppError(err); appErr != nil {
 			middleware.HandleAppError(c, appErr)
 		} else {
-			middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to create product", err))
+			middleware.HandleAppError(c, errors.NewWithError(errors.ErrCodeInternalServer, "Failed to create product", http.StatusInternalServerError, err))
 		}
 		return
 	}
@@ -81,7 +82,7 @@ func listProductsHandler(c *gin.Context) {
 	// Parse query parameters
 	var req ProductListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid query parameters", err.Error()))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeBadRequest, "Invalid query parameters", err.Error(), http.StatusBadRequest))
 		return
 	}
 
@@ -91,7 +92,7 @@ func listProductsHandler(c *gin.Context) {
 		if appErr := errors.GetAppError(err); appErr != nil {
 			middleware.HandleAppError(c, appErr)
 		} else {
-			middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to list products", err))
+			middleware.HandleAppError(c, errors.NewWithError(errors.ErrCodeInternalServer, "Failed to list products", http.StatusInternalServerError, err))
 		}
 		return
 	}
@@ -111,7 +112,7 @@ func getProductHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid product ID", "Product ID must be a valid integer"))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeBadRequest, "Invalid product ID", "Product ID must be a valid integer", http.StatusBadRequest))
 		return
 	}
 
@@ -123,9 +124,9 @@ func getProductHandler(c *gin.Context) {
 		} else {
 			// Check if it's a "not found" error by string matching (for backward compatibility)
 			if err.Error() == "product with id "+idStr+" not found" {
-				middleware.HandleAppError(c, errors.NewProductNotFound(id))
+				middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeProductNotFound, "Product not found", fmt.Sprintf("Product with ID %v not found", id), http.StatusNotFound).WithField("product_id", id))
 			} else {
-				middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to get product", err))
+				middleware.HandleAppError(c, errors.NewWithError(errors.ErrCodeInternalServer, "Failed to get product", http.StatusInternalServerError, err))
 			}
 		}
 		return
@@ -146,14 +147,14 @@ func updateProductHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid product ID", "Product ID must be a valid integer"))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeBadRequest, "Invalid product ID", "Product ID must be a valid integer", http.StatusBadRequest))
 		return
 	}
 
 	// Parse request body
 	var req UpdateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid request body", err.Error()))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeBadRequest, "Invalid request body", err.Error(), http.StatusBadRequest))
 		return
 	}
 
@@ -165,9 +166,9 @@ func updateProductHandler(c *gin.Context) {
 		} else {
 			// Check if it's a "not found" error
 			if err.Error() == "product with id "+idStr+" not found" {
-				middleware.HandleAppError(c, errors.NewProductNotFound(id))
+				middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeProductNotFound, "Product not found", fmt.Sprintf("Product with ID %v not found", id), http.StatusNotFound).WithField("product_id", id))
 			} else {
-				middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to update product", err))
+				middleware.HandleAppError(c, errors.NewWithError(errors.ErrCodeInternalServer, "Failed to update product", http.StatusInternalServerError, err))
 			}
 		}
 		return
@@ -188,7 +189,7 @@ func deleteProductHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid product ID", "Product ID must be a valid integer"))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeBadRequest, "Invalid product ID", "Product ID must be a valid integer", http.StatusBadRequest))
 		return
 	}
 
@@ -200,9 +201,9 @@ func deleteProductHandler(c *gin.Context) {
 		} else {
 			// Check if it's a "not found" error
 			if err.Error() == "product with id "+idStr+" not found" {
-				middleware.HandleAppError(c, errors.NewProductNotFound(id))
+				middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeProductNotFound, "Product not found", fmt.Sprintf("Product with ID %v not found", id), http.StatusNotFound).WithField("product_id", id))
 			} else {
-				middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to delete product", err))
+				middleware.HandleAppError(c, errors.NewWithError(errors.ErrCodeInternalServer, "Failed to delete product", http.StatusInternalServerError, err))
 			}
 		}
 		return
@@ -222,7 +223,7 @@ func getProductBySKUHandler(c *gin.Context) {
 	// Parse SKU from URL parameter
 	sku := c.Param("sku")
 	if sku == "" {
-		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("SKU parameter is required", "SKU cannot be empty"))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeBadRequest, "SKU parameter is required", "SKU cannot be empty", http.StatusBadRequest))
 		return
 	}
 
@@ -234,9 +235,9 @@ func getProductBySKUHandler(c *gin.Context) {
 		} else {
 			// Check if it's a "not found" error
 			if err.Error() == "product with sku "+sku+" not found" {
-				middleware.HandleAppError(c, errors.NewNotFoundWithDetails("Product not found", "Product with SKU '"+sku+"' not found").WithField("sku", sku))
+				middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeNotFound, "Product not found", "Product with SKU '"+sku+"' not found", http.StatusNotFound).WithField("sku", sku))
 			} else {
-				middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to get product by SKU", err))
+				middleware.HandleAppError(c, errors.NewWithError(errors.ErrCodeInternalServer, "Failed to get product by SKU", http.StatusInternalServerError, err))
 			}
 		}
 		return
@@ -257,7 +258,7 @@ func updateStockHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid product ID", "Product ID must be a valid integer"))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeBadRequest, "Invalid product ID", "Product ID must be a valid integer", http.StatusBadRequest))
 		return
 	}
 
@@ -266,13 +267,13 @@ func updateStockHandler(c *gin.Context) {
 		Stock int `json:"stock" binding:"required,min=0"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Invalid request body", err.Error()))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeBadRequest, "Invalid request body", err.Error(), http.StatusBadRequest))
 		return
 	}
 
 	// Validate stock value
 	if req.Stock < 0 {
-		middleware.HandleAppError(c, errors.NewInvalidStock(req.Stock))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeInvalidStock, "Invalid stock quantity", fmt.Sprintf("Stock quantity %d is invalid", req.Stock), http.StatusUnprocessableEntity).WithField("stock", req.Stock))
 		return
 	}
 
@@ -284,9 +285,9 @@ func updateStockHandler(c *gin.Context) {
 		} else {
 			// Check if it's a "not found" error
 			if err.Error() == "product with id "+idStr+" not found" {
-				middleware.HandleAppError(c, errors.NewProductNotFound(id))
+				middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeProductNotFound, "Product not found", fmt.Sprintf("Product with ID %v not found", id), http.StatusNotFound).WithField("product_id", id))
 			} else {
-				middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Failed to update stock", err))
+				middleware.HandleAppError(c, errors.NewWithError(errors.ErrCodeInternalServer, "Failed to update stock", http.StatusInternalServerError, err))
 			}
 		}
 		return

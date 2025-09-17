@@ -29,40 +29,32 @@ func main() {
 func exampleHandler(c *gin.Context) {
 	id := c.Param("id")
 
-	// Example 1: Validation error
+	// Example 1: Missing parameter error
 	if id == "" {
-		middleware.HandleAppError(c, errors.NewBadRequestWithDetails("Missing ID parameter", "ID is required"))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeBadRequest, "Missing ID parameter", "ID is required", http.StatusBadRequest))
 		return
 	}
 
 	// Example 2: Business logic error
 	if id == "notfound" {
-		middleware.HandleAppError(c, errors.NewProductNotFound(123).WithField("requested_id", id))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeProductNotFound, "Product not found", fmt.Sprintf("Product with ID %v not found", 123), http.StatusNotFound).WithField("product_id", 123))
 		return
 	}
 
 	// Example 3: Conflict error
 	if id == "conflict" {
-		middleware.HandleAppError(c, errors.NewProductSKUExists("CONFLICT-SKU").WithField("requested_id", id))
+		middleware.HandleAppError(c, errors.NewWithDetails(errors.ErrCodeProductSKUExists, "Product SKU already exists", fmt.Sprintf("Product with SKU '%s' already exists", "CONFLICT-SKU"), http.StatusConflict).WithField("sku", "CONFLICT-SKU"))
 		return
 	}
 
-	// Example 4: Validation error with custom fields
-	if id == "invalid" {
-		middleware.HandleAppError(c, errors.NewValidationErrorWithDetails("Invalid ID format", "ID must be numeric").
-			WithField("provided_id", id).
-			WithField("expected_format", "numeric"))
-		return
-	}
-
-	// Example 5: Internal server error
+	// Example 4: Internal server error
 	if id == "error" {
-		middleware.HandleAppError(c, errors.NewInternalServerErrorWithError("Something went wrong",
+		middleware.HandleAppError(c, errors.NewWithError(errors.ErrCodeInternalServer, "Something went wrong", http.StatusInternalServerError,
 			fmt.Errorf("database connection failed")))
 		return
 	}
 
-	// Example 6: Success case
+	// Example 5: Success case
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Success!",
 		"id":      id,
@@ -75,13 +67,11 @@ func exampleServiceMethod(ctx context.Context, id string) error {
 	// Simulate different error scenarios
 	switch id {
 	case "db_error":
-		return errors.NewDatabaseError("query products", fmt.Errorf("connection timeout"))
+		return errors.NewWithError(errors.ErrCodeDatabaseQuery, "Database operation failed", http.StatusInternalServerError, fmt.Errorf("connection timeout")).WithField("operation", "query products")
 	case "not_found":
-		return errors.NewProductNotFound(123)
-	case "validation":
-		return errors.NewValidationErrorWithDetails("Invalid input", "ID must be positive integer")
+		return errors.NewWithDetails(errors.ErrCodeProductNotFound, "Product not found", fmt.Sprintf("Product with ID %v not found", 123), http.StatusNotFound).WithField("product_id", 123)
 	case "conflict":
-		return errors.NewProductSKUExists("EXISTING-SKU")
+		return errors.NewWithDetails(errors.ErrCodeProductSKUExists, "Product SKU already exists", fmt.Sprintf("Product with SKU '%s' already exists", "EXISTING-SKU"), http.StatusConflict).WithField("sku", "EXISTING-SKU")
 	default:
 		return nil
 	}
@@ -99,5 +89,5 @@ func handleServiceError(err error) *errors.AppError {
 	}
 
 	// Wrap standard error
-	return errors.NewInternalServerErrorWithError("Service operation failed", err)
+	return errors.NewWithError(errors.ErrCodeInternalServer, "Service operation failed", http.StatusInternalServerError, err)
 }
