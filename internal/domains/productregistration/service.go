@@ -4,23 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	"tushartemplategin/pkg/errors"
 	"tushartemplategin/pkg/interfaces"
 )
 
 // ProductService implements the Service interface for product business logic
 type ProductService struct {
-	repo        Repository
-	logger      interfaces.Logger
-	errorHelper *errors.ErrorHelper
+	repo   Repository
+	logger interfaces.Logger
 }
 
 // NewProductService creates a new product service
 func NewProductService(repo Repository, log interfaces.Logger) Service {
 	return &ProductService{
-		repo:        repo,
-		logger:      log,
-		errorHelper: errors.NewErrorHelper(),
+		repo:   repo,
+		logger: log,
 	}
 }
 
@@ -39,14 +36,14 @@ func (s *ProductService) CreateProduct(ctx context.Context, req *CreateProductRe
 			"error": err.Error(),
 			"sku":   req.SKU,
 		})
-		return nil, s.errorHelper.HandleDatabaseError(ctx, "SKU_EXISTS_CHECK", errors.ComponentProductService, err)
+		return nil, fmt.Errorf("failed to validate SKU: %w", err)
 	}
 
 	if exists {
 		s.logger.Warn(ctx, "Product creation failed: SKU already exists", interfaces.Fields{
 			"sku": req.SKU,
 		})
-		return nil, s.errorHelper.HandleDuplicateValueError(ctx, "sku", req.SKU, errors.ComponentProductService)
+		return nil, fmt.Errorf("product with SKU %s already exists", req.SKU)
 	}
 
 	// Create product entity
@@ -67,7 +64,7 @@ func (s *ProductService) CreateProduct(ctx context.Context, req *CreateProductRe
 			"error": err.Error(),
 			"sku":   req.SKU,
 		})
-		return nil, s.errorHelper.HandleDatabaseError(ctx, "PRODUCT_CREATE", errors.ComponentProductService, err)
+		return nil, fmt.Errorf("failed to create product: %w", err)
 	}
 
 	s.logger.Info(ctx, "Product created successfully", interfaces.Fields{
