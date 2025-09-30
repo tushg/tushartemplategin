@@ -274,7 +274,6 @@ func setDatabaseDefaults() {
 
 	// Message Catalog defaults
 	viper.SetDefault("message_catalog.default_language", "en-US")
-	viper.SetDefault("message_catalog.supported_languages", []string{"en-US", "fr-FR"})
 	viper.SetDefault("message_catalog.cache_enabled", true)
 	viper.SetDefault("message_catalog.cache_ttl_seconds", 3600)
 	viper.SetDefault("message_catalog.reload_interval_seconds", 300)
@@ -282,12 +281,11 @@ func setDatabaseDefaults() {
 
 // MessageCatalogConfig contains message catalog configuration
 type MessageCatalogConfig struct {
-	DefaultLanguage    string          `mapstructure:"default_language"`        // Default language (e.g., "en-US")
-	SupportedLanguages []string        `mapstructure:"supported_languages"`     // Supported languages
-	CacheEnabled       bool            `mapstructure:"cache_enabled"`           // Enable caching
-	CacheTTL           int             `mapstructure:"cache_ttl_seconds"`       // Cache TTL in seconds
-	ReloadInterval     int             `mapstructure:"reload_interval_seconds"` // Reload interval in seconds
-	Catalogs           []CatalogConfig `mapstructure:"catalogs"`                // Catalog configurations
+	DefaultLanguage string          `mapstructure:"default_language"`        // Default language (e.g., "en-US")
+	CacheEnabled    bool            `mapstructure:"cache_enabled"`           // Enable caching
+	CacheTTL        int             `mapstructure:"cache_ttl_seconds"`       // Cache TTL in seconds
+	ReloadInterval  int             `mapstructure:"reload_interval_seconds"` // Reload interval in seconds
+	Catalogs        []CatalogConfig `mapstructure:"catalogs"`                // Catalog configurations
 }
 
 // GetMessageCatalog returns the message catalog configuration

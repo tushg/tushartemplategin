@@ -35,8 +35,8 @@ func NewMessageCatalogService(config config.MessageCatalogConfig, logger interfa
 		lastReload: make(map[string]time.Time),
 	}
 
-	// Load all catalogs on startup
-	if err := service.ReloadAllCatalogs(context.Background()); err != nil {
+	// Load only default language for all catalogs on startup
+	if err := service.LoadDefaultLanguageCatalogs(context.Background()); err != nil {
 		logger.Error(context.Background(), "Failed to load initial message catalogs", interfaces.Fields{
 			"error": err.Error(),
 		})
@@ -89,9 +89,122 @@ func (s *MessageCatalogService) GetMessage(ctx context.Context, req *MessageRequ
 		}
 		s.cache[req.CatalogName][req.Language][req.MessageCode] = message
 		s.cacheMutex.Unlock()
+
+		// Log when loading a non-default language on-demand
+		if req.Language != s.config.DefaultLanguage {
+			s.logger.Info(ctx, "Loaded non-default language on-demand", interfaces.Fields{
+				"catalog_name": req.CatalogName,
+				"language":     req.Language,
+				"message_code": req.MessageCode,
+			})
+		}
 	}
 
 	return s.formatMessageResponse(message, req.Parameters), nil
+}
+
+// LoadDefaultLanguageCatalogs loads only the default language for all enabled catalogs
+func (s *MessageCatalogService) LoadDefaultLanguageCatalogs(ctx context.Context) error {
+	s.logger.Info(ctx, "Loading default language catalogs", interfaces.Fields{
+		"default_language": s.config.DefaultLanguage,
+	})
+
+	for _, catalog := range s.config.Catalogs {
+		if catalog.Enabled {
+			if err := s.LoadCatalogDefaultLanguage(ctx, catalog.Name); err != nil {
+				s.logger.Error(ctx, "Failed to load default language for catalog", interfaces.Fields{
+					"catalog_name": catalog.Name,
+					"error":        err.Error(),
+				})
+				return err
+			}
+		}
+	}
+
+	s.logger.Info(ctx, "Default language catalogs loaded successfully", interfaces.Fields{})
+	return nil
+}
+
+// LoadCatalogDefaultLanguage loads only the default language for a specific catalog
+func (s *MessageCatalogService) LoadCatalogDefaultLanguage(ctx context.Context, catalogName string) error {
+	s.logger.Info(ctx, "Loading default language for catalog", interfaces.Fields{
+		"catalog_name":     catalogName,
+		"default_language": s.config.DefaultLanguage,
+	})
+
+	// Find catalog configuration
+	var catalogConfig *config.CatalogConfig
+	for _, catalog := range s.config.Catalogs {
+		if catalog.Name == catalogName {
+			catalogConfig = &catalog
+			break
+		}
+	}
+
+	if catalogConfig == nil {
+		return errors.NewWithDetails(errors.ErrCodeNotFound, "Catalog not found",
+			fmt.Sprintf("Catalog '%s' not found in configuration", catalogName), 404)
+	}
+
+	// Load structure file
+	structureData, err := s.loadStructureFile(ctx, catalogConfig)
+	if err != nil {
+		return err
+	}
+
+	// Load only default language file
+	languageData, err := s.loadLanguageFile(ctx, catalogConfig, s.config.DefaultLanguage)
+	if err != nil {
+		s.logger.Warn(ctx, "Failed to load default language file", interfaces.Fields{
+			"catalog_name":     catalogName,
+			"default_language": s.config.DefaultLanguage,
+			"error":            err.Error(),
+		})
+		languageData = make(map[string]interface{})
+	}
+
+	// Initialize catalog cache with only default language
+	catalogMessages := make(map[string]map[string]*Message) // language -> messageCode -> Message
+	catalogMessages[s.config.DefaultLanguage] = make(map[string]*Message)
+
+	// Combine structure and default language data
+	for messageCode, messageStructure := range structureData {
+		structure, ok := messageStructure.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		languageContent, exists := languageData[messageCode]
+		if !exists {
+			languageContent = make(map[string]interface{})
+		}
+
+		// Type assert to map[string]interface{}
+		languageMap, ok := languageContent.(map[string]interface{})
+		if !ok {
+			languageMap = make(map[string]interface{})
+		}
+
+		message := s.combineMessageData(structure, languageMap, catalogName, s.config.DefaultLanguage)
+		catalogMessages[s.config.DefaultLanguage][messageCode] = message
+	}
+
+	// Update cache atomically
+	s.cacheMutex.Lock()
+	s.cache[catalogName] = catalogMessages
+	s.lastReload[catalogName] = time.Now()
+	s.cacheMutex.Unlock()
+
+	// Count total messages for default language
+	totalMessages := len(catalogMessages[s.config.DefaultLanguage])
+
+	s.logger.Info(ctx, "Default language catalog loaded successfully", interfaces.Fields{
+		"catalog_name":     catalogName,
+		"default_language": s.config.DefaultLanguage,
+		"message_count":    totalMessages,
+	})
+
+	return nil
 }
 
 // GetMessageByCode retrieves a message by code, catalog, and language
@@ -240,43 +353,41 @@ func (s *MessageCatalogService) ReloadCatalog(ctx context.Context, catalogName s
 		return err
 	}
 
-	// Load all supported languages
+	// Load only default language
 	catalogMessages := make(map[string]map[string]*Message) // language -> messageCode -> Message
-	for _, language := range s.config.SupportedLanguages {
-		languageData, err := s.loadLanguageFile(ctx, catalogConfig, language)
-		if err != nil {
-			s.logger.Warn(ctx, "Failed to load language file", interfaces.Fields{
-				"catalog_name": catalogName,
-				"language":     language,
-				"error":        err.Error(),
-			})
+	languageData, err := s.loadLanguageFile(ctx, catalogConfig, s.config.DefaultLanguage)
+	if err != nil {
+		s.logger.Warn(ctx, "Failed to load default language file", interfaces.Fields{
+			"catalog_name":     catalogName,
+			"default_language": s.config.DefaultLanguage,
+			"error":            err.Error(),
+		})
+		languageData = make(map[string]interface{})
+	}
+
+	// Initialize default language cache
+	catalogMessages[s.config.DefaultLanguage] = make(map[string]*Message)
+
+	// Combine structure and default language data
+	for messageCode, messageStructure := range structureData {
+		structure, ok := messageStructure.(map[string]interface{})
+		if !ok {
 			continue
 		}
 
-		// Initialize language cache
-		catalogMessages[language] = make(map[string]*Message)
-
-		// Combine structure and language data
-		for messageCode, messageStructure := range structureData {
-			structure, ok := messageStructure.(map[string]interface{})
-			if !ok {
-				continue
-			}
-
-			languageContent, exists := languageData[messageCode]
-			if !exists {
-				languageContent = make(map[string]interface{})
-			}
-
-			// Type assert to map[string]interface{}
-			languageMap, ok := languageContent.(map[string]interface{})
-			if !ok {
-				languageMap = make(map[string]interface{})
-			}
-
-			message := s.combineMessageData(structure, languageMap, catalogName, language)
-			catalogMessages[language][messageCode] = message
+		languageContent, exists := languageData[messageCode]
+		if !exists {
+			languageContent = make(map[string]interface{})
 		}
+
+		// Type assert to map[string]interface{}
+		languageMap, ok := languageContent.(map[string]interface{})
+		if !ok {
+			languageMap = make(map[string]interface{})
+		}
+
+		message := s.combineMessageData(structure, languageMap, catalogName, s.config.DefaultLanguage)
+		catalogMessages[s.config.DefaultLanguage][messageCode] = message
 	}
 
 	// Update cache atomically
@@ -356,7 +467,66 @@ func (s *MessageCatalogService) ListAvailableCatalogs(ctx context.Context) ([]st
 
 // ListAvailableLanguages returns available languages for a catalog
 func (s *MessageCatalogService) ListAvailableLanguages(ctx context.Context, catalogName string) ([]string, error) {
-	return s.config.SupportedLanguages, nil
+	s.logger.Debug(ctx, "Listing available languages", interfaces.Fields{
+		"catalog_name": catalogName,
+	})
+
+	// Find catalog configuration
+	var catalogConfig *config.CatalogConfig
+	for _, catalog := range s.config.Catalogs {
+		if catalog.Name == catalogName {
+			catalogConfig = &catalog
+			break
+		}
+	}
+
+	if catalogConfig == nil {
+		return nil, errors.NewWithDetails(errors.ErrCodeNotFound, "Catalog not found",
+			fmt.Sprintf("Catalog '%s' not found in configuration", catalogName), 404)
+	}
+
+	// Discover available languages dynamically
+	return s.discoverAvailableLanguages(ctx, catalogConfig)
+}
+
+// discoverAvailableLanguages discovers available language files for a catalog
+func (s *MessageCatalogService) discoverAvailableLanguages(ctx context.Context, catalogConfig *config.CatalogConfig) ([]string, error) {
+	languages := []string{}
+
+	// Always include default language
+	languages = append(languages, s.config.DefaultLanguage)
+
+	// Scan directory for language files matching the pattern
+	pattern := filepath.Join(catalogConfig.Path, strings.Replace(catalogConfig.LanguageFilePattern, "{lang}", "*", 1))
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		s.logger.Warn(ctx, "Failed to scan for language files", interfaces.Fields{
+			"catalog_name": catalogConfig.Name,
+			"pattern":      pattern,
+			"error":        err.Error(),
+		})
+		return languages, nil // Return at least default language
+	}
+
+	// Extract language codes from file names
+	for _, match := range matches {
+		filename := filepath.Base(match)
+		// Extract language from filename like "messagecatelog-en-US.json"
+		if strings.HasPrefix(filename, "messagecatelog-") && strings.HasSuffix(filename, ".json") {
+			langCode := strings.TrimPrefix(filename, "messagecatelog-")
+			langCode = strings.TrimSuffix(langCode, ".json")
+			if langCode != s.config.DefaultLanguage {
+				languages = append(languages, langCode)
+			}
+		}
+	}
+
+	s.logger.Debug(ctx, "Discovered available languages", interfaces.Fields{
+		"catalog_name": catalogConfig.Name,
+		"languages":    languages,
+	})
+
+	return languages, nil
 }
 
 // GetCatalogInfo returns information about a specific catalog
@@ -390,11 +560,21 @@ func (s *MessageCatalogService) GetCatalogInfo(ctx context.Context, catalogName 
 		lastReloaded = reloadTime
 	}
 
+	// Get available languages dynamically
+	availableLanguages, err := s.discoverAvailableLanguages(ctx, catalogConfig)
+	if err != nil {
+		s.logger.Warn(ctx, "Failed to discover available languages", interfaces.Fields{
+			"catalog_name": catalogName,
+			"error":        err.Error(),
+		})
+		availableLanguages = []string{s.config.DefaultLanguage} // Fallback to default
+	}
+
 	return &CatalogInfo{
 		Name:         catalogName,
 		Path:         catalogConfig.Path,
 		Enabled:      catalogConfig.Enabled,
-		Languages:    s.config.SupportedLanguages,
+		Languages:    availableLanguages,
 		MessageCount: messageCount,
 		LastReloaded: lastReloaded,
 	}, nil
@@ -405,10 +585,31 @@ func (s *MessageCatalogService) GetCatalogStats(ctx context.Context) (*CatalogSt
 	s.cacheMutex.RLock()
 	defer s.cacheMutex.RUnlock()
 
+	// Count total unique languages across all catalogs
+	allLanguages := make(map[string]bool)
+	for catalogName := range s.cache {
+		// Find catalog configuration
+		var catalogConfig *config.CatalogConfig
+		for _, catalog := range s.config.Catalogs {
+			if catalog.Name == catalogName {
+				catalogConfig = &catalog
+				break
+			}
+		}
+		if catalogConfig != nil {
+			availableLanguages, err := s.discoverAvailableLanguages(ctx, catalogConfig)
+			if err == nil {
+				for _, lang := range availableLanguages {
+					allLanguages[lang] = true
+				}
+			}
+		}
+	}
+
 	stats := &CatalogStats{
 		TotalCatalogs:     len(s.cache),
 		TotalMessages:     0,
-		LanguagesCount:    len(s.config.SupportedLanguages),
+		LanguagesCount:    len(allLanguages),
 		Catalogs:          []CatalogInfo{},
 		MessagesByCatalog: make(map[string]int),
 		LastReloaded:      time.Time{},
