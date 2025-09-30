@@ -17,9 +17,6 @@ import (
 	// Internal packages for product registration API
 	"tushartemplategin/internal/domains/productregistration"
 
-	// Internal packages for message catalog
-	"tushartemplategin/internal/domains/messagecatalog"
-
 	// External packages for configuration, logging, and server
 	"tushartemplategin/pkg/config"
 	"tushartemplategin/pkg/database"
@@ -103,7 +100,7 @@ func main() {
 
 	// ===== DOMAIN SETUP =====
 	// Step 7: Setup domains and middleware
-	router = setupDomainsAndMiddleware(router, appLogger, db, cfg)
+	router = setupDomainsAndMiddleware(router, appLogger, db)
 
 	// Step 8: Setup API routes using module-level route registration
 	api := router.Group("/api/v1") // API version 1 group
@@ -199,7 +196,7 @@ func main() {
 }
 
 // setupDomainsAndMiddleware initializes domain-specific components and middleware
-func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger, db interfaces.Database, cfg *config.Config) *gin.Engine {
+func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger, db interfaces.Database) *gin.Engine {
 	ctx := context.Background()
 
 	// ===== ERROR HANDLING MIDDLEWARE =====
@@ -248,19 +245,6 @@ func setupDomainsAndMiddleware(router *gin.Engine, appLogger logger.Logger, db i
 		c.Next()
 	})
 	appLogger.Info(ctx, "Product registration domain setup complete", interfaces.Fields{})
-
-	// ===== MESSAGE CATALOG DOMAIN =====
-	appLogger.Info(ctx, "Setting up message catalog domain", interfaces.Fields{})
-
-	// Create message catalog service (no database required)
-	messageCatalogService := messagecatalog.NewMessageCatalogService(cfg.GetMessageCatalog(), appLogger)
-
-	// Add message catalog service to context so other services can access it
-	router.Use(func(c *gin.Context) {
-		c.Set("messageCatalogService", messageCatalogService)
-		c.Next()
-	})
-	appLogger.Info(ctx, "Message catalog domain setup complete", interfaces.Fields{})
 
 	appLogger.Info(ctx, "All domain setup complete", interfaces.Fields{})
 	return router
