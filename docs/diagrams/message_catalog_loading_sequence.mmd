@@ -1,0 +1,32 @@
+sequenceDiagram
+    participant Service
+    participant MessageCatalog
+    participant FileLoader
+    participant FileSystem
+    participant Cache
+    
+    Service->>MessageCatalog: ReloadCatalog()
+    Note over Service,MessageCatalog: Trigger catalog reload
+    
+    MessageCatalog->>FileLoader: LoadAllLanguages()
+    Note over MessageCatalog,FileLoader: Load all language files
+    
+    FileLoader->>FileSystem: Scan directory for JSON files
+    FileSystem-->>FileLoader: Return file list
+    
+    loop For each language file
+        FileLoader->>FileSystem: Read JSON file
+        FileSystem-->>FileLoader: Return file content
+        FileLoader->>FileLoader: Parse JSON
+        FileLoader->>FileLoader: Create Message objects
+    end
+    
+    FileLoader-->>MessageCatalog: Return all messages map
+    Note over FileLoader,MessageCatalog: language -> messageCode -> Message
+    
+    MessageCatalog->>Cache: Update cache with all messages
+    Note over MessageCatalog,Cache: Replace entire cache
+    
+    MessageCatalog->>MessageCatalog: Update lastReload timestamp
+    MessageCatalog-->>Service: Confirm reload complete
+    Note over MessageCatalog,Service: Catalog successfully reloaded

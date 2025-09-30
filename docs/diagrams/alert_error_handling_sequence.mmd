@@ -1,0 +1,35 @@
+sequenceDiagram
+    participant Client
+    participant AlertService
+    participant MessageCatalog
+    participant Logger
+    
+    Client->>AlertService: ProcessAlertRequest
+    Note over Client,AlertService: Invalid messageCode
+    
+    AlertService->>MessageCatalog: GetMessage(code, language)
+    MessageCatalog->>MessageCatalog: Check cache
+    MessageCatalog->>MessageCatalog: Load from file
+    
+    alt File not found
+        MessageCatalog->>Logger: Log error
+        Note over Logger: "Language file not found"
+        MessageCatalog-->>AlertService: Return AppError
+        Note over MessageCatalog,AlertService: ErrCodeNotFound
+    else JSON parse error
+        MessageCatalog->>Logger: Log error
+        Note over Logger: "Failed to parse JSON"
+        MessageCatalog-->>AlertService: Return AppError
+        Note over MessageCatalog,AlertService: ErrCodeBadRequest
+    else Message not found
+        MessageCatalog->>Logger: Log warning
+        Note over Logger: "Message code not found"
+        MessageCatalog-->>AlertService: Return AppError
+        Note over MessageCatalog,AlertService: ErrCodeNotFound
+    end
+    
+    AlertService->>Logger: Log error context
+    Note over Logger: Include request details and error
+    
+    AlertService-->>Client: Return AppError
+    Note over AlertService,Client: Structured error with details

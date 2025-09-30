@@ -1,0 +1,190 @@
+classDiagram
+    class AlertService {
+        <<interface>>
+        +CreateAlert(ctx, req) Alert
+        +GetAlert(ctx, id) Alert
+        +UpdateAlert(ctx, id, req) Alert
+        +DeleteAlert(ctx, id) error
+        +ListAlerts(ctx, req) ListAlertsResponse
+        +GetAlertByMessageCode(ctx, code, lang) AlertResponse
+        +ProcessAlert(ctx, req) AlertResponse
+        +GetAlertStats(ctx) AlertStats
+    }
+    
+    class AlertServiceImpl {
+        -catalog MessageCatalog
+        -logger Logger
+        -alerts map[string]*Alert
+        +CreateAlert(ctx, req) Alert
+        +GetAlert(ctx, id) Alert
+        +UpdateAlert(ctx, id, req) Alert
+        +DeleteAlert(ctx, id) error
+        +ListAlerts(ctx, req) ListAlertsResponse
+        +GetAlertByMessageCode(ctx, code, lang) AlertResponse
+        +ProcessAlert(ctx, req) AlertResponse
+        +GetAlertStats(ctx) AlertStats
+        -formatMessage(template, params) string
+    }
+    
+    class MessageCatalog {
+        <<interface>>
+        +GetMessage(ctx, code, lang) Message
+        +GetMessageByCode(ctx, code) Message
+        +GetMessagesByCategory(ctx, cat, lang) []Message
+        +GetMessagesBySeverity(ctx, sev, lang) []Message
+        +ListAvailableLanguages(ctx) []string
+        +ReloadCatalog(ctx) error
+    }
+    
+    class MessageCatalogService {
+        -config CatalogConfig
+        -logger Logger
+        -loader MessageLoader
+        -cache map[string]map[string]*Message
+        -cacheMutex sync.RWMutex
+        -lastReload time.Time
+        +GetMessage(ctx, code, lang) Message
+        +GetMessageByCode(ctx, code) Message
+        +GetMessagesByCategory(ctx, cat, lang) []Message
+        +GetMessagesBySeverity(ctx, sev, lang) []Message
+        +ListAvailableLanguages(ctx) []string
+        +ReloadCatalog(ctx) error
+    }
+    
+    class MessageLoader {
+        <<interface>>
+        +LoadMessages(ctx, lang) map[string]*Message
+        +LoadAllLanguages(ctx) map[string]map[string]*Message
+        +GetAvailableLanguages(ctx) []string
+    }
+    
+    class FileMessageLoader {
+        -catalogPath string
+        -logger Logger
+        +LoadMessages(ctx, lang) map[string]*Message
+        +LoadAllLanguages(ctx) map[string]map[string]*Message
+        +GetAvailableLanguages(ctx) []string
+    }
+    
+    class Alert {
+        +ID string
+        +MessageCode string
+        +Category string
+        +Severity string
+        +Status string
+        +Title string
+        +Description string
+        +Parameters map[string]string
+        +Metadata map[string]string
+        +CreatedAt time.Time
+        +UpdatedAt time.Time
+        +ProcessedAt *time.Time
+        +ExpiresAt *time.Time
+    }
+    
+    class Message {
+        +MessageCode string
+        +Category string
+        +Severity string
+        +Message string
+        +DetailedDescription string
+        +ResponseAction string
+        +Metadata map[string]string
+        +CreatedAt time.Time
+        +UpdatedAt time.Time
+    }
+    
+    class AlertResponse {
+        +AlertID string
+        +MessageCode string
+        +Category string
+        +Severity string
+        +Title string
+        +Message string
+        +DetailedDescription string
+        +ResponseAction string
+        +FormattedMessage string
+        +Parameters map[string]string
+        +Metadata map[string]string
+        +Language string
+        +Timestamp time.Time
+        +ExpiresAt *time.Time
+    }
+    
+    class CatalogConfig {
+        +DefaultLanguage string
+        +SupportedLanguages []string
+        +CatalogPath string
+        +ReloadInterval int
+        +CacheEnabled bool
+    }
+    
+    class CreateAlertRequest {
+        +MessageCode string
+        +Category string
+        +Severity string
+        +Title string
+        +Description string
+        +Parameters map[string]string
+        +Metadata map[string]string
+        +ExpiresAt *time.Time
+    }
+    
+    class ProcessAlertRequest {
+        +MessageCode string
+        +Language string
+        +Parameters map[string]string
+        +Metadata map[string]string
+    }
+    
+    class ListAlertsRequest {
+        +Page int
+        +Limit int
+        +Category string
+        +Severity string
+        +Status string
+        +Search string
+        +SortBy string
+        +SortOrder string
+        +Filters map[string]string
+    }
+    
+    class ListAlertsResponse {
+        +Alerts []Alert
+        +Total int64
+        +Page int
+        +Limit int
+    }
+    
+    class AlertStats {
+        +TotalAlerts int64
+        +ActiveAlerts int64
+        +ProcessedAlerts int64
+        +ExpiredAlerts int64
+        +AlertsByCategory map[string]int64
+        +AlertsBySeverity map[string]int64
+        +AlertsByStatus map[string]int64
+        +RecentAlerts []Alert
+        +LastUpdated time.Time
+    }
+    
+    AlertService <|.. AlertServiceImpl
+    MessageCatalog <|.. MessageCatalogService
+    MessageLoader <|.. FileMessageLoader
+    
+    AlertServiceImpl --> MessageCatalog : uses
+    AlertServiceImpl --> Alert : creates
+    AlertServiceImpl --> AlertResponse : creates
+    AlertServiceImpl --> CreateAlertRequest : processes
+    AlertServiceImpl --> ProcessAlertRequest : processes
+    AlertServiceImpl --> ListAlertsRequest : processes
+    AlertServiceImpl --> ListAlertsResponse : creates
+    AlertServiceImpl --> AlertStats : creates
+    
+    MessageCatalogService --> MessageLoader : uses
+    MessageCatalogService --> Message : creates
+    MessageCatalogService --> CatalogConfig : uses
+    
+    FileMessageLoader --> Message : creates
+    
+    Alert --> AlertResponse : converts to

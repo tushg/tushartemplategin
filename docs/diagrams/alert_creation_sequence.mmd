@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant Client
+    participant AlertService
+    participant MessageCatalog
+    participant AlertStorage
+    
+    Client->>AlertService: CreateAlertRequest
+    Note over Client,AlertService: messageCode, category, severity, etc.
+    
+    AlertService->>MessageCatalog: GetMessageByCode(messageCode)
+    Note over AlertService,MessageCatalog: Get message template
+    
+    MessageCatalog-->>AlertService: Return Message object
+    Note over MessageCatalog,AlertService: Template and metadata
+    
+    AlertService->>AlertService: Validate request
+    Note over AlertService: Check required fields
+    
+    AlertService->>AlertService: Create Alert object
+    Note over AlertService: Merge request data with catalog data
+    
+    AlertService->>AlertStorage: Store alert
+    Note over AlertService,AlertStorage: Save to storage (memory/DB)
+    
+    AlertStorage-->>AlertService: Confirm storage
+    AlertService-->>Client: Return created Alert
+    Note over AlertService,Client: Complete alert object with ID

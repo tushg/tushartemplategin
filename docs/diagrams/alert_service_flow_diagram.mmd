@@ -1,0 +1,46 @@
+flowchart TD
+    A[Client Request] --> B{Request Type}
+    
+    B -->|Process Alert| C[Alert Service]
+    B -->|Create Alert| D[Create Alert Flow]
+    B -->|List Alerts| E[List Alerts Flow]
+    B -->|Get Alert Stats| F[Stats Flow]
+    
+    C --> G[Get Message Code]
+    G --> H[Message Catalog Service]
+    H --> I{Check Cache}
+    
+    I -->|Cache Hit| J[Return Cached Message]
+    I -->|Cache Miss| K[Load from File]
+    
+    K --> L[File Message Loader]
+    L --> M[Read JSON File]
+    M --> N[Parse JSON]
+    N --> O[Create Message Object]
+    O --> P[Update Cache]
+    P --> J
+    
+    J --> Q[Format Message with Parameters]
+    Q --> R[Create Alert Response]
+    R --> S[Return to Client]
+    
+    D --> T[Validate Request]
+    T --> U[Get Message from Catalog]
+    U --> V[Create Alert Object]
+    V --> W[Store Alert]
+    W --> X[Return Created Alert]
+    
+    E --> Y[Apply Filters]
+    Y --> Z[Query Alerts]
+    Z --> AA[Apply Pagination]
+    AA --> BB[Return Alert List]
+    
+    F --> CC[Calculate Statistics]
+    CC --> DD[Group by Category/Severity]
+    DD --> EE[Return Stats]
+    
+    style A fill:#e1f5fe
+    style S fill:#c8e6c9
+    style X fill:#c8e6c9
+    style BB fill:#c8e6c9
+    style EE fill:#c8e6c9

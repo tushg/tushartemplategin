@@ -1,0 +1,37 @@
+sequenceDiagram
+    participant Client
+    participant AlertService
+    participant MessageCatalog
+    participant FileLoader
+    participant Cache
+    participant FileSystem
+    
+    Client->>AlertService: ProcessAlertRequest
+    Note over Client,AlertService: messageCode, language, parameters
+    
+    AlertService->>MessageCatalog: GetMessage(code, language)
+    Note over AlertService,MessageCatalog: Request message from catalog
+    
+    MessageCatalog->>Cache: Check cache for language
+    alt Cache Hit
+        Cache-->>MessageCatalog: Return cached message
+    else Cache Miss
+        MessageCatalog->>FileLoader: LoadMessages(language)
+        FileLoader->>FileSystem: Read JSON file
+        FileSystem-->>FileLoader: Return file content
+        FileLoader->>FileLoader: Parse JSON
+        FileLoader-->>MessageCatalog: Return messages map
+        MessageCatalog->>Cache: Update cache
+    end
+    
+    MessageCatalog-->>AlertService: Return Message object
+    Note over MessageCatalog,AlertService: Message with template and metadata
+    
+    AlertService->>AlertService: Format message with parameters
+    Note over AlertService: Apply parameter substitution
+    
+    AlertService->>AlertService: Create AlertResponse
+    Note over AlertService: Include formatted message and metadata
+    
+    AlertService-->>Client: Return AlertResponse
+    Note over AlertService,Client: Complete alert with formatted message
