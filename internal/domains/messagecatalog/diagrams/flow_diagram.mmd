@@ -1,0 +1,64 @@
+flowchart TD
+    A[Client Request] --> B{Request Type}
+    
+    B -->|Get Message| C[GetMessage/GetMessageByCode]
+    B -->|Get by Category| D[GetMessagesByCategory]
+    B -->|Get by Severity| E[GetMessagesBySeverity]
+    B -->|List Languages| F[ListAvailableLanguages]
+    B -->|Reload Catalog| G[ReloadCatalog]
+    B -->|Health Check| H[HealthCheck]
+    
+    C --> I[Check Language]
+    I --> J{Language Specified?}
+    J -->|No| K[Use Default Language]
+    J -->|Yes| L[Use Specified Language]
+    K --> M[Check Cache]
+    L --> M
+    
+    M --> N{Cache Enabled?}
+    N -->|Yes| O{Cache Hit?}
+    N -->|No| P[Load from File]
+    O -->|Yes| Q[Return Cached Message]
+    O -->|No| P
+    
+    P --> R[Read JSON File]
+    R --> S{File Exists?}
+    S -->|No| T[Return File Not Found Error]
+    S -->|Yes| U[Parse JSON]
+    U --> V{Parse Success?}
+    V -->|No| W[Return Parse Error]
+    V -->|Yes| X[Find Message by Code]
+    X --> Y{Message Found?}
+    Y -->|No| Z[Return Message Not Found Error]
+    Y -->|Yes| AA[Update Cache]
+    AA --> BB[Return Message]
+    
+    D --> CC[Load Messages from File]
+    E --> CC
+    CC --> DD[Filter by Category/Severity]
+    DD --> EE[Return Filtered Messages]
+    
+    F --> FF[Scan Directory for JSON Files]
+    FF --> GG[Extract Language Names]
+    GG --> HH[Return Language List]
+    
+    G --> II[Scan All Language Files]
+    II --> JJ[Load All Messages]
+    JJ --> KK[Update Cache]
+    KK --> LL[Return Success]
+    
+    H --> MM[Check Available Languages]
+    MM --> NN{Languages Available?}
+    NN -->|No| OO[Return Health Check Error]
+    NN -->|Yes| PP[Return Success]
+    
+    style A fill:#e1f5fe
+    style BB fill:#c8e6c9
+    style EE fill:#c8e6c9
+    style HH fill:#c8e6c9
+    style LL fill:#c8e6c9
+    style PP fill:#c8e6c9
+    style T fill:#ffcdd2
+    style W fill:#ffcdd2
+    style Z fill:#ffcdd2
+    style OO fill:#ffcdd2

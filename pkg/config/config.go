@@ -8,9 +8,10 @@ import (
 
 // Config represents the main application configuration structure
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`   // Server-related configuration
-	Log      LogConfig      `mapstructure:"log"`      // Logging configuration
-	Database DatabaseConfig `mapstructure:"database"` // Database configuration
+	Server         ServerConfig         `mapstructure:"server"`          // Server-related configuration
+	Log            LogConfig            `mapstructure:"log"`             // Logging configuration
+	Database       DatabaseConfig       `mapstructure:"database"`        // Database configuration
+	MessageCatalog MessageCatalogConfig `mapstructure:"message_catalog"` // Message catalog configuration
 }
 
 // ServerConfig contains server-specific settings
@@ -199,6 +200,20 @@ func (mc *MySQLConfig) GetPassword() string { return mc.Password }
 // GetTimeout returns the timeout
 func (mc *MySQLConfig) GetTimeout() time.Duration { return mc.Timeout }
 
+// MessageCatalogConfig contains message catalog configuration
+type MessageCatalogConfig struct {
+	DefaultLanguage    string   `mapstructure:"default_language"`
+	SupportedLanguages []string `mapstructure:"supported_languages"`
+	CatalogPath        string   `mapstructure:"catalog_path"`
+	ReloadInterval     int      `mapstructure:"reload_interval_seconds"`
+	CacheEnabled       bool     `mapstructure:"cache_enabled"`
+}
+
+// GetMessageCatalog returns the message catalog configuration
+func (c *Config) GetMessageCatalog() MessageCatalogConfig {
+	return c.MessageCatalog
+}
+
 // Load reads configuration from config files and environment variables
 // Returns a Config struct or an error if configuration cannot be loaded
 func Load() (*Config, error) {
@@ -270,4 +285,11 @@ func setDatabaseDefaults() {
 	viper.SetDefault("database.mysql.maxRetries", 3)
 	viper.SetDefault("database.mysql.retryDelay", "1s")
 	viper.SetDefault("database.mysql.healthCheckInterval", "30s")
+
+	// Message Catalog defaults
+	viper.SetDefault("message_catalog.default_language", "en")
+	viper.SetDefault("message_catalog.supported_languages", []string{"en"})
+	viper.SetDefault("message_catalog.catalog_path", "./pkg/alert/catalog/message_catalog")
+	viper.SetDefault("message_catalog.reload_interval_seconds", 300)
+	viper.SetDefault("message_catalog.cache_enabled", true)
 }
