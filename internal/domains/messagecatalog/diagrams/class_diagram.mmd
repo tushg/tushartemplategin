@@ -2,24 +2,20 @@ classDiagram
     class MessageCatalogService {
         -config: MessageCatalogConfig
         -logger: Logger
-        -cache: map[string]map[string]*Message
+        -cache: map
         -cacheMutex: sync.RWMutex
-        -lastReload: map[string]time.Time
-        +GetMessage(req: MessageRequest): MessageResponse
-        +GetMessageByCode(code, catalog, lang): MessageResponse
-        +GetMessagesByCategory(category, catalog, lang): []MessageResponse
-        +GetMessagesBySeverity(severity, catalog, lang): []MessageResponse
-        +ReloadCatalog(catalogName): error
-        +ReloadAllCatalogs(): error
-        +HealthCheck(): error
-        +ListAvailableCatalogs(): []string
-        +ListAvailableLanguages(catalog): []string
-        +GetCatalogInfo(catalog): CatalogInfo
-        +GetCatalogStats(): CatalogStats
-        -loadMessageFromFiles(catalog, code, lang): Message
-        -combineMessageData(structure, language): Message
-        -formatMessageResponse(message, params): MessageResponse
-        -applyParameters(content, params): string
+        -lastReload: map
+        +GetMessage(req) MessageResponse
+        +GetMessageByCode(code, catalog, lang) MessageResponse
+        +GetMessagesByCategory(category, catalog, lang) []MessageResponse
+        +GetMessagesBySeverity(severity, catalog, lang) []MessageResponse
+        +ReloadCatalog(catalogName) error
+        +ReloadAllCatalogs() error
+        +HealthCheck() error
+        +ListAvailableCatalogs() []string
+        +ListAvailableLanguages(catalog) []string
+        +GetCatalogInfo(catalog) CatalogInfo
+        +GetCatalogStats() CatalogStats
     }
 
     class Message {
@@ -32,7 +28,7 @@ classDiagram
         +ResponseAction: string
         +Language: string
         +CatalogName: string
-        +Metadata: map[string]interface{}
+        +Metadata: map
         +CreatedAt: time.Time
         +UpdatedAt: time.Time
     }
@@ -41,7 +37,7 @@ classDiagram
         +MessageCode: string
         +Language: string
         +CatalogName: string
-        +Parameters: map[string]interface{}
+        +Parameters: map
     }
 
     class MessageResponse {
@@ -55,68 +51,30 @@ classDiagram
         +Language: string
         +CatalogName: string
         +FormattedMessage: string
-        +Metadata: map[string]interface{}
+        +Metadata: map
         +Timestamp: time.Time
-    }
-
-    class CatalogConfig {
-        +Name: string
-        +Path: string
-        +Enabled: bool
-        +StructureFile: string
-        +LanguageFilePattern: string
-    }
-
-    class MessageCatalogConfig {
-        +DefaultLanguage: string
-        +SupportedLanguages: []string
-        +CacheEnabled: bool
-        +CacheTTL: int
-        +ReloadInterval: int
-        +Catalogs: []CatalogConfig
     }
 
     class AlertService {
         -messageCatalog: MessageCatalogService
         -logger: Logger
-        +ProcessAlert(alertCode: string): AlertResponse
-        +GetAlertMessage(code, lang, params): AlertMessage
-        +ListAlertsByCategory(category, lang): []AlertMessage
+        +ProcessAlert(alertCode) AlertResponse
+        +GetAlertMessage(code, lang, params) AlertMessage
+        +ListAlertsByCategory(category, lang) []AlertMessage
     }
 
     class AuditService {
         -messageCatalog: MessageCatalogService
         -logger: Logger
-        +LogEvent(eventCode: string): AuditEvent
-        +GetAuditMessage(code, lang, params): AuditMessage
-        +ListEventsByCategory(category, lang): []AuditMessage
-    }
-
-    class AlertResponse {
-        +Code: string
-        +Category: string
-        +Severity: string
-        +Message: string
-        +Description: string
-        +Action: string
-        +Timestamp: time.Time
-    }
-
-    class AuditEvent {
-        +EventCode: string
-        +EventCategory: string
-        +RiskLevel: string
-        +Description: string
-        +Action: string
-        +Timestamp: time.Time
+        +LogEvent(eventCode) AuditEvent
+        +GetAuditMessage(code, lang, params) AuditMessage
+        +ListEventsByCategory(category, lang) []AuditMessage
     }
 
     MessageCatalogService --> Message : creates
     MessageCatalogService --> MessageRequest : processes
     MessageCatalogService --> MessageResponse : returns
-    MessageCatalogService --> CatalogConfig : uses
-    MessageCatalogService --> MessageCatalogConfig : configured by
     AlertService --> MessageCatalogService : consumes
     AuditService --> MessageCatalogService : consumes
-    AlertService --> AlertResponse : returns
-    AuditService --> AuditEvent : returns
+    AlertService --> MessageResponse : returns
+    AuditService --> MessageResponse : returns

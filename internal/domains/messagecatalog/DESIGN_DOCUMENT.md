@@ -20,24 +20,20 @@ classDiagram
     class MessageCatalogService {
         -config: MessageCatalogConfig
         -logger: Logger
-        -cache: map[string]map[string]*Message
+        -cache: map
         -cacheMutex: sync.RWMutex
-        -lastReload: map[string]time.Time
-        +GetMessage(req: MessageRequest): MessageResponse
-        +GetMessageByCode(code, catalog, lang): MessageResponse
-        +GetMessagesByCategory(category, catalog, lang): []MessageResponse
-        +GetMessagesBySeverity(severity, catalog, lang): []MessageResponse
-        +ReloadCatalog(catalogName): error
-        +ReloadAllCatalogs(): error
-        +HealthCheck(): error
-        +ListAvailableCatalogs(): []string
-        +ListAvailableLanguages(catalog): []string
-        +GetCatalogInfo(catalog): CatalogInfo
-        +GetCatalogStats(): CatalogStats
-        -loadMessageFromFiles(catalog, code, lang): Message
-        -combineMessageData(structure, language): Message
-        -formatMessageResponse(message, params): MessageResponse
-        -applyParameters(content, params): string
+        -lastReload: map
+        +GetMessage(req) MessageResponse
+        +GetMessageByCode(code, catalog, lang) MessageResponse
+        +GetMessagesByCategory(category, catalog, lang) []MessageResponse
+        +GetMessagesBySeverity(severity, catalog, lang) []MessageResponse
+        +ReloadCatalog(catalogName) error
+        +ReloadAllCatalogs() error
+        +HealthCheck() error
+        +ListAvailableCatalogs() []string
+        +ListAvailableLanguages(catalog) []string
+        +GetCatalogInfo(catalog) CatalogInfo
+        +GetCatalogStats() CatalogStats
     }
 
     class Message {
@@ -50,7 +46,7 @@ classDiagram
         +ResponseAction: string
         +Language: string
         +CatalogName: string
-        +Metadata: map[string]interface{}
+        +Metadata: map
         +CreatedAt: time.Time
         +UpdatedAt: time.Time
     }
@@ -59,7 +55,7 @@ classDiagram
         +MessageCode: string
         +Language: string
         +CatalogName: string
-        +Parameters: map[string]interface{}
+        +Parameters: map
     }
 
     class MessageResponse {
@@ -73,71 +69,33 @@ classDiagram
         +Language: string
         +CatalogName: string
         +FormattedMessage: string
-        +Metadata: map[string]interface{}
+        +Metadata: map
         +Timestamp: time.Time
-    }
-
-    class CatalogConfig {
-        +Name: string
-        +Path: string
-        +Enabled: bool
-        +StructureFile: string
-        +LanguageFilePattern: string
-    }
-
-    class MessageCatalogConfig {
-        +DefaultLanguage: string
-        +SupportedLanguages: []string
-        +CacheEnabled: bool
-        +CacheTTL: int
-        +ReloadInterval: int
-        +Catalogs: []CatalogConfig
     }
 
     class AlertService {
         -messageCatalog: MessageCatalogService
         -logger: Logger
-        +ProcessAlert(alertCode: string): AlertResponse
-        +GetAlertMessage(code, lang, params): AlertMessage
-        +ListAlertsByCategory(category, lang): []AlertMessage
+        +ProcessAlert(alertCode) AlertResponse
+        +GetAlertMessage(code, lang, params) AlertMessage
+        +ListAlertsByCategory(category, lang) []AlertMessage
     }
 
     class AuditService {
         -messageCatalog: MessageCatalogService
         -logger: Logger
-        +LogEvent(eventCode: string): AuditEvent
-        +GetAuditMessage(code, lang, params): AuditMessage
-        +ListEventsByCategory(category, lang): []AuditMessage
-    }
-
-    class AlertResponse {
-        +Code: string
-        +Category: string
-        +Severity: string
-        +Message: string
-        +Description: string
-        +Action: string
-        +Timestamp: time.Time
-    }
-
-    class AuditEvent {
-        +EventCode: string
-        +EventCategory: string
-        +RiskLevel: string
-        +Description: string
-        +Action: string
-        +Timestamp: time.Time
+        +LogEvent(eventCode) AuditEvent
+        +GetAuditMessage(code, lang, params) AuditMessage
+        +ListEventsByCategory(category, lang) []AuditMessage
     }
 
     MessageCatalogService --> Message : creates
     MessageCatalogService --> MessageRequest : processes
     MessageCatalogService --> MessageResponse : returns
-    MessageCatalogService --> CatalogConfig : uses
-    MessageCatalogService --> MessageCatalogConfig : configured by
     AlertService --> MessageCatalogService : consumes
     AuditService --> MessageCatalogService : consumes
-    AlertService --> AlertResponse : returns
-    AuditService --> AuditEvent : returns
+    AlertService --> MessageResponse : returns
+    AuditService --> MessageResponse : returns
 ```
 
 ## 🔄 **Sequence Diagram**
@@ -153,30 +111,30 @@ sequenceDiagram
     Note over AS,Config: Message Catalog Service Usage Flow
 
     AS->>MCS: GetMessage(MessageRequest)
-    Note right of AS: Request: {code: "ABC0001", catalog: "alert", lang: "en-US", params: {exp_date: "2024-12-31"}}
+    Note right of AS: Request with code, catalog, language, parameters
 
     MCS->>Config: GetCatalogConfig("alert")
-    Config-->>MCS: CatalogConfig{path: "./pkg/alert/catalog", enabled: true}
+    Config-->>MCS: CatalogConfig
 
-    MCS->>Cache: Get("alert:ABC0001:en-US")
+    MCS->>Cache: Get cached message
     alt Cache Hit
         Cache-->>MCS: Message object
-        MCS->>MCS: formatMessageResponse(message, params)
+        MCS->>MCS: formatMessageResponse
         MCS-->>AS: MessageResponse
     else Cache Miss
-        MCS->>FS: Load messagecatelog.json
+        MCS->>FS: Load structure file
         FS-->>MCS: Structure data
-        MCS->>FS: Load messagecatelog-en-US.json
+        MCS->>FS: Load language file
         FS-->>MCS: Language data
-        MCS->>MCS: combineMessageData(structure, language)
-        MCS->>Cache: Set("alert:ABC0001:en-US", message)
-        MCS->>MCS: formatMessageResponse(message, params)
+        MCS->>MCS: combineMessageData
+        MCS->>Cache: Set cached message
+        MCS->>MCS: formatMessageResponse
         MCS-->>AS: MessageResponse
     end
 
-    Note over AS: Alert Service processes the response
-    AS->>AS: Create AlertResponse from MessageResponse
-    AS-->>AS: Return formatted alert message
+    Note over AS: Alert Service processes response
+    AS->>AS: Create AlertResponse
+    AS-->>AS: Return formatted alert
 ```
 
 ## 🌊 **Flow Diagram**
@@ -240,7 +198,7 @@ pkg/
 ```mermaid
 graph LR
     A[messagecatelog.json] --> C[Message Structure]
-    B[messagecatelog-{lang}.json] --> D[Language Content]
+    B[messagecatelog-lang.json] --> D[Language Content]
     C --> E[Message Object]
     D --> E
     E --> F[Cache Layer]

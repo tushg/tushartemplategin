@@ -8,27 +8,27 @@ sequenceDiagram
     Note over AS,Config: Message Catalog Service Usage Flow
 
     AS->>MCS: GetMessage(MessageRequest)
-    Note right of AS: Request: {code: "ABC0001", catalog: "alert", lang: "en-US", params: {exp_date: "2024-12-31"}}
+    Note right of AS: Request with code, catalog, language, parameters
 
     MCS->>Config: GetCatalogConfig("alert")
-    Config-->>MCS: CatalogConfig{path: "./pkg/alert/catalog", enabled: true}
+    Config-->>MCS: CatalogConfig
 
-    MCS->>Cache: Get("alert:ABC0001:en-US")
+    MCS->>Cache: Get cached message
     alt Cache Hit
         Cache-->>MCS: Message object
-        MCS->>MCS: formatMessageResponse(message, params)
+        MCS->>MCS: formatMessageResponse
         MCS-->>AS: MessageResponse
     else Cache Miss
-        MCS->>FS: Load messagecatelog.json
+        MCS->>FS: Load structure file
         FS-->>MCS: Structure data
-        MCS->>FS: Load messagecatelog-en-US.json
+        MCS->>FS: Load language file
         FS-->>MCS: Language data
-        MCS->>MCS: combineMessageData(structure, language)
-        MCS->>Cache: Set("alert:ABC0001:en-US", message)
-        MCS->>MCS: formatMessageResponse(message, params)
+        MCS->>MCS: combineMessageData
+        MCS->>Cache: Set cached message
+        MCS->>MCS: formatMessageResponse
         MCS-->>AS: MessageResponse
     end
 
-    Note over AS: Alert Service processes the response
-    AS->>AS: Create AlertResponse from MessageResponse
-    AS-->>AS: Return formatted alert message
+    Note over AS: Alert Service processes response
+    AS->>AS: Create AlertResponse
+    AS-->>AS: Return formatted alert
