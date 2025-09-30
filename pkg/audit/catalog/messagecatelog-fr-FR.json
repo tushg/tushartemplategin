@@ -1,0 +1,27 @@
+{
+  "AUD0001": {
+    "message": "Événement d'accès utilisateur enregistré",
+    "detailed_description": "L'utilisateur {{.username}} {{.action}} à {{.timestamp}} depuis l'IP {{.ip_address}}. Durée de session : {{.session_duration}}.",
+    "response_action": "Examiner les modèles d'accès et vérifier l'identité de l'utilisateur"
+  },
+  "AUD0002": {
+    "message": "Modification de données détectée",
+    "detailed_description": "Modification de données dans la table {{.table_name}} par l'utilisateur {{.username}} à {{.timestamp}}. Enregistrements affectés : {{.record_count}}. Opération : {{.operation_type}}.",
+    "response_action": "Vérifier l'intégrité des données et examiner l'autorisation de modification"
+  },
+  "AUD0003": {
+    "message": "Événement système survenu",
+    "detailed_description": "Événement système {{.event_type}} survenu à {{.timestamp}}. Composant : {{.component_name}}. Statut : {{.event_status}}.",
+    "response_action": "Surveiller la santé du système et enquêter si nécessaire"
+  },
+  "AUD0004": {
+    "message": "Événement de sécurité détecté",
+    "detailed_description": "Événement de sécurité {{.security_event_type}} détecté à {{.timestamp}}. Source : {{.source_ip}}. Cible : {{.target_resource}}. Niveau de risque : {{.risk_level}}.",
+    "response_action": "Enquêter immédiatement et prendre des mesures de sécurité"
+  },
+  "AUD0005": {
+    "message": "Changement de configuration enregistré",
+    "detailed_description": "Changement de configuration dans {{.config_section}} par l'utilisateur {{.username}} à {{.timestamp}}. Ancienne valeur : {{.old_value}}. Nouvelle valeur : {{.new_value}}.",
+    "response_action": "Vérifier l'autorisation de changement de configuration et tester la stabilité du système"
+  }
+}

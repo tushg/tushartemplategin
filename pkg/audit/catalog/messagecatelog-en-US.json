@@ -1,0 +1,27 @@
+{
+  "AUD0001": {
+    "message": "User access event logged",
+    "detailed_description": "User {{.username}} {{.action}} at {{.timestamp}} from IP {{.ip_address}}. Session duration: {{.session_duration}}.",
+    "response_action": "Review access patterns and verify user identity"
+  },
+  "AUD0002": {
+    "message": "Data modification detected",
+    "detailed_description": "Data modification in table {{.table_name}} by user {{.username}} at {{.timestamp}}. Records affected: {{.record_count}}. Operation: {{.operation_type}}.",
+    "response_action": "Verify data integrity and review change authorization"
+  },
+  "AUD0003": {
+    "message": "System event occurred",
+    "detailed_description": "System event {{.event_type}} occurred at {{.timestamp}}. Component: {{.component_name}}. Status: {{.event_status}}.",
+    "response_action": "Monitor system health and investigate if necessary"
+  },
+  "AUD0004": {
+    "message": "Security event detected",
+    "detailed_description": "Security event {{.security_event_type}} detected at {{.timestamp}}. Source: {{.source_ip}}. Target: {{.target_resource}}. Risk level: {{.risk_level}}.",
+    "response_action": "Immediately investigate and take security measures"
+  },
+  "AUD0005": {
+    "message": "Configuration change logged",
+    "detailed_description": "Configuration change in {{.config_section}} by user {{.username}} at {{.timestamp}}. Previous value: {{.old_value}}. New value: {{.new_value}}.",
+    "response_action": "Verify configuration change authorization and test system stability"
+  }
+}

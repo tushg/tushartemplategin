@@ -1,0 +1,8 @@
+graph LR
+    A[messagecatelog.json] --> C[Message Structure]
+    B[messagecatelog-{lang}.json] --> D[Language Content]
+    C --> E[Message Object]
+    D --> E
+    E --> F[Cache Layer]
+    F --> G[MessageResponse]
+    G --> H[Consumer Service]

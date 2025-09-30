@@ -8,9 +8,10 @@ import (
 
 // Config represents the main application configuration structure
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`   // Server-related configuration
-	Log      LogConfig      `mapstructure:"log"`      // Logging configuration
-	Database DatabaseConfig `mapstructure:"database"` // Database configuration
+	Server         ServerConfig         `mapstructure:"server"`          // Server-related configuration
+	Log            LogConfig            `mapstructure:"log"`             // Logging configuration
+	Database       DatabaseConfig       `mapstructure:"database"`        // Database configuration
+	MessageCatalog MessageCatalogConfig `mapstructure:"message_catalog"` // Message catalog configuration
 }
 
 // ServerConfig contains server-specific settings
@@ -270,4 +271,35 @@ func setDatabaseDefaults() {
 	viper.SetDefault("database.mysql.maxRetries", 3)
 	viper.SetDefault("database.mysql.retryDelay", "1s")
 	viper.SetDefault("database.mysql.healthCheckInterval", "30s")
+
+	// Message Catalog defaults
+	viper.SetDefault("message_catalog.default_language", "en-US")
+	viper.SetDefault("message_catalog.supported_languages", []string{"en-US", "fr-FR"})
+	viper.SetDefault("message_catalog.cache_enabled", true)
+	viper.SetDefault("message_catalog.cache_ttl_seconds", 3600)
+	viper.SetDefault("message_catalog.reload_interval_seconds", 300)
+}
+
+// MessageCatalogConfig contains message catalog configuration
+type MessageCatalogConfig struct {
+	DefaultLanguage    string          `mapstructure:"default_language"`        // Default language (e.g., "en-US")
+	SupportedLanguages []string        `mapstructure:"supported_languages"`     // Supported languages
+	CacheEnabled       bool            `mapstructure:"cache_enabled"`           // Enable caching
+	CacheTTL           int             `mapstructure:"cache_ttl_seconds"`       // Cache TTL in seconds
+	ReloadInterval     int             `mapstructure:"reload_interval_seconds"` // Reload interval in seconds
+	Catalogs           []CatalogConfig `mapstructure:"catalogs"`                // Catalog configurations
+}
+
+// GetMessageCatalog returns the message catalog configuration
+func (c *Config) GetMessageCatalog() MessageCatalogConfig {
+	return c.MessageCatalog
+}
+
+// CatalogConfig represents configuration for a specific catalog
+type CatalogConfig struct {
+	Name                string `mapstructure:"name"`                  // Catalog name (e.g., "alert", "audit")
+	Path                string `mapstructure:"path"`                  // Path to catalog files
+	Enabled             bool   `mapstructure:"enabled"`               // Whether catalog is enabled
+	StructureFile       string `mapstructure:"structure_file"`        // Structure file name (e.g., "messagecatelog.json")
+	LanguageFilePattern string `mapstructure:"language_file_pattern"` // Language file pattern (e.g., "messagecatelog-{lang}.json")
 }

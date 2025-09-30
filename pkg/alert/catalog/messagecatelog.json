@@ -1,0 +1,32 @@
+{
+  "ABC0001": {
+    "message_code": "ABC0001",
+    "category": "Registration",
+    "severity": "CRITICAL",
+    "component": "Reg"
+  },
+  "ABC0002": {
+    "message_code": "ABC0002",
+    "category": "Authentication",
+    "severity": "HIGH",
+    "component": "Auth"
+  },
+  "ABC0003": {
+    "message_code": "ABC0003",
+    "category": "License",
+    "severity": "MEDIUM",
+    "component": "Lic"
+  },
+  "ABC0004": {
+    "message_code": "ABC0004",
+    "category": "System",
+    "severity": "LOW",
+    "component": "Sys"
+  },
+  "ABC0005": {
+    "message_code": "ABC0005",
+    "category": "Security",
+    "severity": "CRITICAL",
+    "component": "Sec"
+  }
+}

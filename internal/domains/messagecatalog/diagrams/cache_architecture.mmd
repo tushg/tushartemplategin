@@ -1,0 +1,11 @@
+graph TD
+    A[Request] --> B{Cache Check}
+    B -->|Hit| C[Return Cached Message]
+    B -->|Miss| D[Load from Files]
+    D --> E[Parse JSON Files]
+    E --> F[Combine Data]
+    F --> G[Update Cache]
+    G --> H[Return Message]
+    C --> I[Apply Parameters]
+    H --> I
+    I --> J[Return Response]

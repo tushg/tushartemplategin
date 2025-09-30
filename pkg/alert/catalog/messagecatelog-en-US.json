@@ -1,0 +1,27 @@
+{
+  "ABC0001": {
+    "message": "Registration is about to expire",
+    "detailed_description": "Registration is about to expire on {{.exp_date}}. Please renew before the expiry date to avoid service interruption.",
+    "response_action": "Renew the registration before expiry"
+  },
+  "ABC0002": {
+    "message": "Authentication failed",
+    "detailed_description": "User authentication failed for user {{.username}} at {{.timestamp}}. Multiple failed attempts detected.",
+    "response_action": "Check credentials and try again. Contact administrator if issue persists."
+  },
+  "ABC0003": {
+    "message": "License validation warning",
+    "detailed_description": "License validation failed for feature {{.feature_name}}. Current license expires on {{.expiry_date}}.",
+    "response_action": "Update license or contact licensing team"
+  },
+  "ABC0004": {
+    "message": "System maintenance scheduled",
+    "detailed_description": "System maintenance is scheduled for {{.maintenance_date}} from {{.start_time}} to {{.end_time}}.",
+    "response_action": "Plan accordingly and save your work before maintenance window"
+  },
+  "ABC0005": {
+    "message": "Security breach detected",
+    "detailed_description": "Potential security breach detected from IP {{.ip_address}} at {{.timestamp}}. Suspicious activity: {{.activity_type}}.",
+    "response_action": "Immediately review security logs and take appropriate action"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "ABC0001": {
+    "message": "L'enregistrement va bientôt expirer",
+    "detailed_description": "L'enregistrement va expirer le {{.exp_date}}. Veuillez renouveler avant la date d'expiration pour éviter l'interruption de service.",
+    "response_action": "Renouveler l'enregistrement avant l'expiration"
+  },
+  "ABC0002": {
+    "message": "Échec de l'authentification",
+    "detailed_description": "L'authentification de l'utilisateur a échoué pour l'utilisateur {{.username}} à {{.timestamp}}. Plusieurs tentatives échouées détectées.",
+    "response_action": "Vérifiez les identifiants et réessayez. Contactez l'administrateur si le problème persiste."
+  },
+  "ABC0003": {
+    "message": "Avertissement de validation de licence",
+    "detailed_description": "La validation de licence a échoué pour la fonctionnalité {{.feature_name}}. La licence actuelle expire le {{.expiry_date}}.",
+    "response_action": "Mettre à jour la licence ou contacter l'équipe de licences"
+  },
+  "ABC0004": {
+    "message": "Maintenance système programmée",
+    "detailed_description": "La maintenance système est programmée pour le {{.maintenance_date}} de {{.start_time}} à {{.end_time}}.",
+    "response_action": "Planifiez en conséquence et sauvegardez votre travail avant la fenêtre de maintenance"
+  },
+  "ABC0005": {
+    "message": "Violation de sécurité détectée",
+    "detailed_description": "Violation de sécurité potentielle détectée depuis l'IP {{.ip_address}} à {{.timestamp}}. Activité suspecte : {{.activity_type}}.",
+    "response_action": "Examinez immédiatement les journaux de sécurité et prenez les mesures appropriées"
+  }
+}

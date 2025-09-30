@@ -1,0 +1,32 @@
+{
+  "AUD0001": {
+    "message_code": "AUD0001",
+    "category": "UserAccess",
+    "severity": "HIGH",
+    "component": "Auth"
+  },
+  "AUD0002": {
+    "message_code": "AUD0002",
+    "category": "DataModification",
+    "severity": "CRITICAL",
+    "component": "Data"
+  },
+  "AUD0003": {
+    "message_code": "AUD0003",
+    "category": "SystemEvent",
+    "severity": "MEDIUM",
+    "component": "Sys"
+  },
+  "AUD0004": {
+    "message_code": "AUD0004",
+    "category": "SecurityEvent",
+    "severity": "CRITICAL",
+    "component": "Sec"
+  },
+  "AUD0005": {
+    "message_code": "AUD0005",
+    "category": "ConfigurationChange",
+    "severity": "HIGH",
+    "component": "Config"
+  }
+}

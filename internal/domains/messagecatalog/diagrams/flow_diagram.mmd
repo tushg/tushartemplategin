@@ -1,0 +1,35 @@
+flowchart TD
+    A[Service Request] --> B{Message Catalog Service}
+    B --> C[Validate Request]
+    C --> D{Request Valid?}
+    D -->|No| E[Return Validation Error]
+    D -->|Yes| F[Set Default Language if Empty]
+    F --> G{Cache Enabled?}
+    G -->|Yes| H[Check Cache]
+    H --> I{Cache Hit?}
+    I -->|Yes| J[Return Cached Message]
+    I -->|No| K[Load from Files]
+    G -->|No| K
+    K --> L[Load Structure File]
+    L --> M{Structure File Exists?}
+    M -->|No| N[Return File Not Found Error]
+    M -->|Yes| O[Parse Structure JSON]
+    O --> P{Message Code Exists?}
+    P -->|No| Q[Return Message Not Found Error]
+    P -->|Yes| R[Load Language File]
+    R --> S{Language File Exists?}
+    S -->|No| T[Use Structure Only]
+    S -->|Yes| U[Parse Language JSON]
+    U --> V[Combine Structure + Language Data]
+    T --> V
+    V --> W[Create Message Object]
+    W --> X{Cache Enabled?}
+    X -->|Yes| Y[Update Cache]
+    X -->|No| Z[Format Response]
+    Y --> Z
+    Z --> AA{Parameters Provided?}
+    AA -->|Yes| BB[Apply Template Parameters]
+    AA -->|No| CC[Return MessageResponse]
+    BB --> CC
+    J --> CC
+    CC --> DD[Return to Consumer Service]
